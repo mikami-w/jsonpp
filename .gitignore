@@ -2,3 +2,4 @@ print.h
 reference.cpp
 reference.exe
 .idea
+.clang-tidy

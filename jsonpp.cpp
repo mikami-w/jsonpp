@@ -161,6 +161,21 @@ namespace JSONpp
             throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, res_f.ptr - num.data());
     }
 
+    JSONValue Parser::parse_string()
+    { // 还不能处理转义字符
+        bool is_escape = false;
+        ahead(); // 跳过左引号
+        auto start = pos; // 字符串起点
+        while (pos < doc.size() && doc[pos] != '"')
+            ++pos;
+        if (pos == doc.size())
+            throw JSONParseError("cannot find end of string, which start at position " + std::to_string(start - 1));
+        auto end = pos;
+        ahead(); // 跳过右引号
+
+        return {std::string(doc.substr(start, end - start))};
+    }
+
     JSONValue Parser::parse()
     {
         skip_whitespace();

@@ -6,6 +6,7 @@
 
 #include <charconv>
 #include <stdexcept>
+#include "jsonexception.h"
 #ifndef NDEBUG
 #include <iostream>
 using std::cerr, std::endl;
@@ -13,27 +14,6 @@ using std::cerr, std::endl;
 
 namespace JSONpp
 {
-    /*
-     * JSON exceptions
-     */
-    class JSONParseError: public std::runtime_error
-    {
-    public:
-        static constexpr const char* UNPARSABLE_MESSAGE = "Unparsable character(s)";
-        JSONParseError(std::string const& msg, size_t pos):
-            std::runtime_error(msg + " at position " + std::to_string(pos)) {}
-    };
-
-    class JSONTypeError: public std::runtime_error
-    {
-    public:
-        JSONTypeError(std::string const& msg):
-            std::runtime_error(msg) {}
-    };
-    /*
-     * end JSON exceptions
-     */
-
     /*
      * JSON Parser
      */
@@ -53,22 +33,30 @@ namespace JSONpp
         JSONValue parse_true();
         JSONValue parse_false();
         JSONValue parse_number();
-        JSONValue parse_string(){};
-        JSONValue parse_array(){};
-        JSONValue parse_object(){};
+        JSONValue parse_string();
+
+        JSONValue parse_array()
+        {
+        };
+
+        JSONValue parse_object()
+        {
+        };
 
     public:
         Parser() = delete;
-        explicit Parser(std::string_view in): pos(0), doc(in) {}
+
+        explicit Parser(std::string_view in) : pos(0), doc(in)
+        {
+        }
 
         JSONValue parse();
-
     };
 
     bool Parser::is_whitespace(char ch)
     {
-        static const char ws[]{' ', '\n', '\r', '\t'};
-        return ch == ws[0] || ch == ws[1] || ch == ws[2] || ch == ws[3];
+        // static const char ws[]{' ', '\n', '\r', '\t'};
+        return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
     }
 
     void Parser::skip_whitespace()
@@ -82,7 +70,8 @@ namespace JSONpp
     }
 
     JSONValue Parser::parse_value()
-    { // 调用该函数之前与之后均调用了 skip_whitespace()
+    {
+        // 调用该函数之前与之后均调用了 skip_whitespace()
         char ch = doc[pos];
         switch (ch)
         {
@@ -187,7 +176,7 @@ namespace JSONpp
 
         // pos == doc.size() 表示恰好解析整个文档
         if (pos < doc.size())
-            throw JSONParseError("Unexpected character(s) after JSON value", pos);
+            throw JSONParseError("Unexpected character(s) after JSON value");
 #ifndef NDEBUG
         if (pos > doc.size())
             throw JSONParseError("WTF pos is beyond size of doc " + std::to_string(doc.size()), pos);
@@ -195,6 +184,7 @@ namespace JSONpp
 
         return val;
     }
+
     /*
      * end JSON Parser
      */
@@ -203,35 +193,37 @@ namespace JSONpp
      * asserted accessor
      */
     using _J_Tp = std::variant
-        <
-            JNull,
-            bool,
-            std::int64_t,
-            double,
-            std::string,
-            JArray,
-            JObject
-        >;
+    <
+        JNull,
+        bool,
+        std::int64_t,
+        double,
+        std::string,
+        JArray,
+        JObject
+    >;
 
-    template<typename T>
+    template <typename T>
     static T& as_impl(_J_Tp& v, const char* typeName)
     {
         try
         {
             return std::get<T>(v);
-        } catch (const std::bad_variant_access&)
+        }
+        catch (const std::bad_variant_access&)
         {
             throw JSONTypeError(std::string("Value is not a ") + typeName);
         }
     }
 
-    template<typename T>
+    template <typename T>
     static T const& as_impl(const _J_Tp& v, const char* typeName)
     {
         try
         {
             return std::get<T>(v);
-        } catch (const std::bad_variant_access&)
+        }
+        catch (const std::bad_variant_access&)
         {
             throw JSONTypeError(std::string("Value is not a ") + typeName);
         }

@@ -13,6 +13,9 @@ using std::cerr, std::endl;
 
 namespace JSONpp
 {
+    /*
+     * JSON exceptions
+     */
     class JSONParseError: public std::runtime_error
     {
     public:
@@ -21,6 +24,19 @@ namespace JSONpp
             std::runtime_error(msg + " at position " + std::to_string(pos)) {}
     };
 
+    class JSONTypeError: public std::runtime_error
+    {
+    public:
+        JSONTypeError(std::string const& msg):
+            std::runtime_error(msg) {}
+    };
+    /*
+     * end JSON exceptions
+     */
+
+    /*
+     * JSON Parser
+     */
     class Parser
     {
         size_t pos;
@@ -161,6 +177,111 @@ namespace JSONpp
 
         return val;
     }
+    /*
+     * end JSON Parser
+     */
+
+    /*
+     * asserted accessor
+     */
+    using _J_Tp = std::variant
+        <
+            JNull,
+            bool,
+            std::int64_t,
+            double,
+            std::string,
+            JArray,
+            JObject
+        >;
+
+    template<typename T>
+    static T& as_impl(_J_Tp& v, const char* typeName)
+    {
+        try
+        {
+            return std::get<T>(v);
+        } catch (const std::bad_variant_access&)
+        {
+            throw JSONTypeError(std::string("Value is not a ") + typeName);
+        }
+    }
+
+    template<typename T>
+    static T const& as_impl(const _J_Tp& v, const char* typeName)
+    {
+        try
+        {
+            return std::get<T>(v);
+        } catch (const std::bad_variant_access&)
+        {
+            throw JSONTypeError(std::string("Value is not a ") + typeName);
+        }
+    }
+
+    bool JSONValue::as_bool() const
+    {
+        return as_impl<bool>(value, "bool");
+    }
+
+    std::int64_t JSONValue::as_int64() const
+    {
+        return as_impl<std::int64_t>(value, "int64");
+    }
+
+    double JSONValue::as_double() const
+    {
+        return as_impl<double>(value, "double");
+    }
+
+    std::string const& JSONValue::as_string() const
+    {
+        return as_impl<std::string>(value, "string");
+    }
+
+    JArray const& JSONValue::as_array() const
+    {
+        return as_impl<JArray>(value, "array");
+    }
+
+    JObject const& JSONValue::as_object() const
+    {
+        return as_impl<JObject>(value, "object");
+    }
+
+    bool& JSONValue::as_bool()
+    {
+        return as_impl<bool>(value, "bool");
+    }
+
+    std::int64_t& JSONValue::as_int64()
+    {
+        return as_impl<std::int64_t>(value, "int64");
+    }
+
+    double& JSONValue::as_double()
+    {
+        return as_impl<double>(value, "double");
+    }
+
+    std::string& JSONValue::as_string()
+    {
+        return as_impl<std::string>(value, "string");
+    }
+
+    JArray& JSONValue::as_array()
+    {
+        return as_impl<JArray>(value, "array");
+    }
+
+    JObject& JSONValue::as_object()
+    {
+        return as_impl<JObject>(value, "object");
+    }
+
+    /*
+     * endasserted accessor
+     */
 
     JSONValue parse(std::string_view json_str)
     {

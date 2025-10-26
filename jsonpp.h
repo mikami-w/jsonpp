@@ -59,20 +59,63 @@ namespace JSONpp{
          */
 
         /*
-         * type check
+         * type checkers
          */
         bool is_null() const { return std::holds_alternative<JNull>(value); }
         bool is_bool() const { return std::holds_alternative<bool>(value); }
         bool is_number() const { return std::holds_alternative<std::int64_t>(value) || std::holds_alternative<double>(value); }
+        bool is_int64() const { return std::holds_alternative<std::int64_t>(value); }
+        bool is_double() const { return std::holds_alternative<double>(value); }
         bool is_string() const { return std::holds_alternative<std::string>(value); }
         bool is_array() const { return std::holds_alternative<JArray>(value); }
         bool is_object() const { return std::holds_alternative<JObject>(value); }
         /*
-         * end type check
+         * end type checkers
          */
 
         /*
-         * 访问操作符 for JArray and JObject
+         * safe accessors
+         */
+        JNull const* get_if_null() const { return std::get_if<JNull>(&value); }
+        bool const* get_if_bool() const { return std::get_if<bool>(&value); }
+        std::int64_t const* get_if_int64() const { return std::get_if<std::int64_t>(&value); }
+        double const* get_if_double() const { return std::get_if<double>(&value); }
+        std::string const* get_if_string() const { return std::get_if<std::string>(&value); }
+        JArray const* get_if_array() const { return std::get_if<JArray>(&value); }
+        JObject const* get_if_object() const { return std::get_if<JObject>(&value); }
+
+        bool* get_if_bool() { return std::get_if<bool>(&value); }
+        std::int64_t* get_if_int() { return std::get_if<std::int64_t>(&value); }
+        double* get_if_double() { return std::get_if<double>(&value); }
+        std::string* get_if_string() { return std::get_if<std::string>(&value); }
+        JArray* get_if_array() { return std::get_if<JArray>(&value); }
+        JObject* get_if_object() { return std::get_if<JObject>(&value); }
+        /*
+         * end safe accessors
+         */
+
+        /*
+         * asserted accessors
+         */
+        bool as_bool() const;
+        std::int64_t as_int64() const;
+        double as_double() const;
+        std::string const& as_string() const;
+        JArray const& as_array() const;
+        JObject const& as_object() const;
+
+        bool& as_bool();
+        std::int64_t& as_int64();
+        double& as_double();
+        std::string& as_string();
+        JArray& as_array();
+        JObject& as_object();
+        /*
+         * end asserted accessors
+         */
+
+        /*
+         * accessors for JArray and JObject
          */
         JSONValue& operator[](size_t index);
         const JSONValue& operator[](size_t index) const;
@@ -80,7 +123,7 @@ namespace JSONpp{
         JSONValue& operator[](std::string const& key);
         const JSONValue& operator[](std::string const& key) const;
         /*
-         * end 访问操作符 for JArray and JObject
+         * end accessors for JArray and JObject
          */
 
 

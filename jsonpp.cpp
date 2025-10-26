@@ -50,7 +50,7 @@ namespace JSONpp
         {
         }
 
-        JSONValue parse();
+        std::optional<JSONValue> parse();
     };
 
     bool Parser::is_whitespace(char ch)
@@ -165,26 +165,25 @@ namespace JSONpp
         return {std::string(doc.substr(start, end - start))};
     }
 
-    JSONValue Parser::parse()
+    std::optional<JSONValue> Parser::parse()
     {
         skip_whitespace();
-        if (pos == doc.size())
-            throw JSONEmptyDataError();
+        if (pos == doc.size()) // doc 为空
+            return std::nullopt;
 
         auto val = parse_value();
         skip_whitespace();
 
-        // pos == doc.size() 表示恰好解析整个文档
+        if (pos == doc.size()) // 表示恰好解析整个文档
+            return val;
+
         if (pos < doc.size())
             throw JSONParseError("Unexpected character(s) after JSON value");
 #ifndef NDEBUG
         if (pos > doc.size())
             throw JSONParseError("WTF pos is beyond size of doc " + std::to_string(doc.size()), pos);
 #endif
-
-        return val;
     }
-
     /*
      * end JSON Parser
      */
@@ -192,7 +191,7 @@ namespace JSONpp
     /*
      * asserted accessor
      */
-    using _J_Tp = std::variant
+    using _Json_Tp = std::variant
     <
         JNull,
         bool,
@@ -204,7 +203,7 @@ namespace JSONpp
     >;
 
     template <typename T>
-    static T& as_impl(_J_Tp& v, const char* typeName)
+    static T& as_impl(_Json_Tp& v, const char* typeName)
     {
         try
         {
@@ -217,7 +216,7 @@ namespace JSONpp
     }
 
     template <typename T>
-    static T const& as_impl(const _J_Tp& v, const char* typeName)
+    static T const& as_impl(const _Json_Tp& v, const char* typeName)
     {
         try
         {
@@ -288,12 +287,11 @@ namespace JSONpp
     {
         return as_impl<JObject>(value, "object");
     }
-
     /*
      * endasserted accessor
      */
 
-    JSONValue parse(std::string_view json_str)
+    std::optional<JSONValue> parse(std::string_view json_str)
     {
         return Parser(json_str).parse();
     }

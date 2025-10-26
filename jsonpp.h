@@ -6,6 +6,7 @@
 #define JSONpp_H
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -129,7 +130,7 @@ namespace JSONpp{
 
     };
 
-    JSONValue parse(std::string_view json_str);
+    std::optional<JSONValue> parse(std::string_view json_str);
 
 } // namespace JSONpp
 

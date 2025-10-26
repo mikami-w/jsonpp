@@ -179,6 +179,9 @@ namespace JSONpp
     JSONValue Parser::parse()
     {
         skip_whitespace();
+        if (pos == doc.size())
+            throw JSONEmptyDataError();
+
         auto val = parse_value();
         skip_whitespace();
 

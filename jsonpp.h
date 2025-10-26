@@ -20,7 +20,6 @@ namespace JSONpp{
     using JArray = std::vector<JSONValue>;
     using JObject = std::unordered_map<std::string, JSONValue>;
 
-
     class JSONValue
     {
         std::variant

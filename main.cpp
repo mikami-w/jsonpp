@@ -5,9 +5,9 @@ int main()
 {
     std::cout << std::boolalpha;
 
-    std::string input("null");
+    std::string input("3e-5");
     auto json = JSONpp::parse(input);
-    std::cout << json.is_null() << std::endl;
+    std::cout << json.is_number() << std::endl;
 
 
     return 0;

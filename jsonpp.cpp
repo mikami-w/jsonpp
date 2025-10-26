@@ -8,7 +8,7 @@
 #include <stdexcept>
 #ifndef NDEBUG
 #include <iostream>
-using std::cerr;
+using std::cerr, std::endl;
 #endif
 
 namespace JSONpp
@@ -129,7 +129,6 @@ namespace JSONpp
         auto res_i = std::from_chars(num.data(), num.data() + num.size(), val_i);
         if (res_i.ptr == num.data() + num.size() && res_i.ec == std::errc()) // 成功
         {
-            pos += num.size();
             return {val_i};
         }
 
@@ -137,7 +136,6 @@ namespace JSONpp
         auto res_f = std::from_chars(num.data(), num.data() + num.size(), val_f);
         if (res_f.ptr == num.data() + num.size() && res_f.ec == std::errc()) // 成功
         {
-            pos += num.size();
             return {val_f};
         }
 
@@ -153,8 +151,14 @@ namespace JSONpp
         auto val = parse_value();
         skip_whitespace();
 
-        if (pos != doc.size())
+        // pos == doc.size() 表示恰好解析整个文档
+        if (pos < doc.size())
             throw JSONParseError("Unexpected character(s) after JSON value", pos);
+#ifndef NDEBUG
+        if (pos > doc.size())
+            throw JSONParseError("WTF pos is beyond size of doc " + std::to_string(doc.size()), pos);
+#endif
+
         return val;
     }
 

@@ -8,5 +8,6 @@ add_executable(JSONpp
         main.cpp
         jsonpp.cpp
         jsonpp.h
+        jsonexception.h
 )
 

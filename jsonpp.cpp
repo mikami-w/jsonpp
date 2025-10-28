@@ -352,9 +352,13 @@ namespace JSONpp
     /*
      * stringifier
      */
-    inline bool needs_excaping(char ch)
+    inline bool needs_escaping(char ch)
     {
-        return ch == '/' || ch == '\"' || ch == '\\' || static_cast<unsigned char>(ch) < 0x20;
+        return ch == '\"' || ch == '\\' || static_cast<unsigned char>(ch) < 0x20
+#ifdef ESCAPE_FORWARD_SLASH
+        || ch == '/'
+#endif
+        ;
     }
 
     std::ostream& escape_string(std::ostream& os, std::string_view str) // escape v.转义 e.g. \ -> \\, " -> \"
@@ -364,23 +368,26 @@ namespace JSONpp
         auto const end = str.end();
         while (chunkBegin < end)
         {
-            auto badChar = std::find_if(chunkBegin, end, needs_excaping);
+            auto badChar = std::find_if(chunkBegin, end, needs_escaping);
             auto chunkLength = badChar - chunkBegin;
             if (chunkLength > 0)
             {
                 os.write(std::addressof(*chunkBegin), chunkLength); // 第一个参数应当为指针而不是迭代器, 尽管部分实现中迭代器底层直接使用指针
             }
-            chunkBegin += chunkLength; // 跳过当前块
+            chunkBegin = badChar + 1; // 跳过当前已经写入流的块, 等同于 chunkBegin += chunkLength + 1
 
-            if (chunkBegin == end)
+            // 下面处理转义
+            if (badChar == end)
                 break;
 
-            char ch = *chunkBegin;
+            char ch = *badChar;
             switch (ch)
             {
                 case '\"': os.write("\\\"", 2); break;
                 case '\\': os.write("\\\\", 2); break;
+#ifdef ESCAPE_FORWARD_SLASH
                 case '/': os.write("\\/", 2); break;
+#endif
                 case '\b': os.write("\\b", 2); break; // \x08
                 case '\f': os.write("\\f", 2); break; // \x0C
                 case '\n': os.write("\\n", 2); break; // \x0A
@@ -394,8 +401,6 @@ namespace JSONpp
                         break;
                     }
             }
-
-            ++chunkBegin; // chunkBegin = badChar + 1;
         }
 
         return os << '\"';
@@ -454,7 +459,6 @@ namespace JSONpp
     std::string JSONValue::stringify(bool _prettify)
     {
         std::stringstream ss;
-        ss << std::boolalpha;
         ss << *this;
 
         return ss.str();

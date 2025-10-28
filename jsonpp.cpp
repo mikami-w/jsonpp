@@ -4,11 +4,15 @@
 
 #include "jsonpp.h"
 
+#include <algorithm>
 #include <charconv>
+#include <cstring>
+#include <filesystem>
 #include <stdexcept>
 #include "jsonexception.h"
 #ifndef NDEBUG
 #include <iostream>
+#include <sstream>
 using std::cerr, std::endl;
 #endif
 
@@ -25,30 +29,22 @@ namespace JSONpp
         static bool is_whitespace(char ch);
 
         void skip_whitespace(); // 跳过从 pos 开始的空白字符, 使 pos 指向调用函数后的第一个非空白字符
-        char ahead() { return doc[pos++]; } // 返回当前字符后前进 1 字符
 
-        JSONValue parse_value();
+        JSONValue parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 JSONValue, 使 pos 指向被解析的 JSONValue 后的第一个字节
 
         JSONValue parse_null();
         JSONValue parse_true();
         JSONValue parse_false();
         JSONValue parse_number();
         JSONValue parse_string();
+        JSONValue parse_array();
+        JSONValue parse_object();
 
-        JSONValue parse_array()
-        {
-        };
-
-        JSONValue parse_object()
-        {
-        };
 
     public:
         Parser() = delete;
 
-        explicit Parser(std::string_view in) : pos(0), doc(in)
-        {
-        }
+        explicit Parser(std::string_view in) : pos(0), doc(in) {}
 
         std::optional<JSONValue> parse();
     };
@@ -153,16 +149,77 @@ namespace JSONpp
     JSONValue Parser::parse_string()
     { // 还不能处理转义字符
         bool is_escape = false;
-        ahead(); // 跳过左引号
-        auto start = pos; // 字符串起点
+        auto start = ++pos; // 字符串起点, 跳过左引号
         while (pos < doc.size() && doc[pos] != '"')
+        {
             ++pos;
+        }
         if (pos == doc.size())
             throw JSONParseError("cannot find end of string, which start at position " + std::to_string(start - 1));
-        auto end = pos;
-        ahead(); // 跳过右引号
+        auto end = pos++; // 跳过右引号
 
         return {std::string(doc.substr(start, end - start))};
+    }
+
+    JSONValue Parser::parse_array()
+    {
+        JArray arr;
+        auto start = pos++;// 跳过左 [
+        skip_whitespace();
+        while (pos < doc.size() && doc[pos] != ']')
+        {
+            arr.push_back(parse_value());
+            skip_whitespace();
+
+            // json数组中对象以外的字符只能是空白字符或'['或']'或','
+            if (doc[pos] == ']')
+                break;
+            else if (doc[pos] != ',')
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
+            ++pos; // 跳过 ','
+            skip_whitespace();
+        }
+        if (doc[pos++] != ']') // 跳过右 ]
+            throw JSONParseError("cannot find the end of array, which start at position " + std::to_string(start));
+
+        return {arr};
+    }
+
+    JSONValue Parser::parse_object()
+    {
+        JObject obj;
+        auto start = pos++;// 跳过左 {
+
+        skip_whitespace();
+        while (pos < doc.size() && doc[pos] != '}')
+        {
+            auto key = parse_value();
+
+            if (!key.is_string()) [[unlikely]]
+                throw JSONTypeError("key of an object must be string");
+
+            skip_whitespace();
+            if (doc[pos] != ':')
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
+            ++pos;
+
+            skip_whitespace();
+            auto val = parse_value();
+            obj[key.as_string()] = val;
+
+            skip_whitespace();
+            if (doc[pos] == '}')
+                break;
+            else if (doc[pos] != ',')
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
+            ++pos;
+
+            skip_whitespace();
+        }
+        if (doc[pos++] != '}')
+            throw JSONParseError("cannot find the end of object, which start at position ", start);
+
+        return {obj};
     }
 
     std::optional<JSONValue> Parser::parse()
@@ -183,6 +240,7 @@ namespace JSONpp
         if (pos > doc.size())
             throw JSONParseError("WTF pos is beyond size of doc " + std::to_string(doc.size()), pos);
 #endif
+        return std::nullopt;
     }
     /*
      * end JSON Parser
@@ -290,6 +348,117 @@ namespace JSONpp
     /*
      * endasserted accessor
      */
+
+    /*
+     * stringifier
+     */
+    inline bool needs_excaping(char ch)
+    {
+        return ch == '/' || ch == '\"' || ch == '\\' || static_cast<unsigned char>(ch) < 0x20;
+    }
+
+    std::ostream& escape_string(std::ostream& os, std::string_view str) // escape v.转义 e.g. \ -> \\, " -> \"
+    {
+        os << '\"';
+        auto chunkBegin = str.begin();
+        auto const end = str.end();
+        while (chunkBegin < end)
+        {
+            auto badChar = std::find_if(chunkBegin, end, needs_excaping);
+            auto chunkLength = badChar - chunkBegin;
+            if (chunkLength > 0)
+            {
+                os.write(std::addressof(*chunkBegin), chunkLength); // 第一个参数应当为指针而不是迭代器, 尽管部分实现中迭代器底层直接使用指针
+            }
+            chunkBegin += chunkLength; // 跳过当前块
+
+            if (chunkBegin == end)
+                break;
+
+            char ch = *chunkBegin;
+            switch (ch)
+            {
+                case '\"': os.write("\\\"", 2); break;
+                case '\\': os.write("\\\\", 2); break;
+                case '/': os.write("\\/", 2); break;
+                case '\b': os.write("\\b", 2); break; // \x08
+                case '\f': os.write("\\f", 2); break; // \x0C
+                case '\n': os.write("\\n", 2); break; // \x0A
+                case '\r': os.write("\\r", 2); break; // \x0D
+                case '\t': os.write("\\t", 2); break; // \x09
+                default:
+                    {
+                        char buf[7]{};
+                        std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned short>(ch));
+                        os.write(buf, 6); // \uXXXX一定是6字符
+                        break;
+                    }
+            }
+
+            ++chunkBegin; // chunkBegin = badChar + 1;
+        }
+
+        return os << '\"';
+    }
+
+    std::ostream& operator<<(std::ostream& os, JSONValue const& val)
+    {
+        return std::visit(
+            [&os](auto&& v) -> std::ostream&
+            {
+                using T = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<T, JNull> || std::is_same_v<T, std::nullptr_t>)
+                    return os << "null";
+                if constexpr (std::is_same_v<T, bool>)
+                    return os << (v ? "true" : "false");
+                if constexpr (std::is_same_v<T, std::int64_t> || std::is_same_v<T, double>)
+                    return os << v;
+                if constexpr (std::is_same_v<T, std::string>)
+                { // now unreliable, cannot parse escape characters
+                    return escape_string(os, v);
+                }
+                if constexpr (std::is_same_v<T, JArray>)
+                {
+                    bool first = true;
+                    os << '[';
+                    for (auto const& item : v)
+                    {
+                        if (first)
+                        {
+                            first = false;
+                            os << item;
+                        }
+                        else os << ',' << item;
+                    }
+                    return os << ']';
+                }
+                if constexpr (std::is_same_v<T, JObject>)
+                {
+                    bool first = true;
+                    os << '{';
+                    for (auto const& item : v)
+                    {
+                        if (first)
+                        {
+                            first = false;
+                            os << JSONValue(item.first) << ':' << item.second;
+                        }
+                        else os << ',' << JSONValue(item.first) << ':' << item.second;
+                    }
+                    return os << '}';
+                }
+            }, val.value
+        );
+    }
+
+    std::string JSONValue::stringify(bool _prettify)
+    {
+        std::stringstream ss;
+        ss << std::boolalpha;
+        ss << *this;
+
+        return ss.str();
+    }
 
     std::optional<JSONValue> parse(std::string_view json_str)
     {

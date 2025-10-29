@@ -19,6 +19,99 @@ using std::cerr, std::endl;
 namespace JSONpp
 {
     /*
+     * JSONStringParser
+     */
+    class JSONStringParser
+    {
+        std::string_view doc;
+        size_t& pos;
+
+        static std::int16_t parse_hex4(std::string_view num);
+
+    public:
+        JSONStringParser(std::string_view _doc, size_t& _pos): doc(_doc), pos(_pos) {}
+        std::string parse();
+
+    };
+
+    std::int16_t JSONStringParser::parse_hex4(std::string_view num)
+    { // TODO: 检查num是否真的是个hex
+        std::int16_t result;
+        std::from_chars(num.data(), num.data() + 4, result, 16);
+        return result;
+    }
+
+    std::string JSONStringParser::parse()
+    { // TODO: 处理转义字符
+        size_t const strBegin = pos++; // 字符串起点, 跳过左引号
+        size_t chunkBegin = pos;
+
+        std::string str;
+        str.reserve(doc.size());
+
+        bool isEscaping = false;
+        while (pos < doc.size() && doc[pos] != '"')
+        {
+            // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
+            if (doc[pos] < 0x20)
+                throw JSONParseError("Unescaped control character in string", pos);
+
+            if (isEscaping)
+            {
+                switch (doc[pos])
+                {
+                case '\"': str.append("\""); ++pos; break;
+                case '\\': str.append("\\"); ++pos; break;
+// #ifdef ESCAPE_FORWARD_SLASH
+//                  case '/': str.append("/"); ++pos; break;
+// #endif
+                case 'b': str.append("\b"); ++pos; break;
+                case 'f': str.append("\f"); ++pos; break;
+                case 'n': str.append("\n"); ++pos; break;
+                case 'r': str.append("\r"); ++pos; break;
+                case 't': str.append("\t"); ++pos; break;
+                case 'u':
+                    { // TODO: 解析 utf-16 代理, 没做呢
+                        pos += 4;
+                        break;
+                    }
+                default:
+                    throw JSONParseError("Invalid escape character", pos);
+                }
+                chunkBegin = pos;
+                isEscaping = false;
+                continue;
+            }
+
+            if (doc[pos] == '\\' && !isEscaping)
+            {
+                isEscaping = true;
+                size_t chunkLength = pos - chunkBegin;
+                str.append(doc.substr(chunkBegin, chunkLength));
+                ++pos;
+                continue;
+            }
+
+            // 普通字符, 指针前进
+            ++pos;
+        }
+
+        if (doc[pos] == '"')
+        { // 字符串结束, 写入最后一个块
+            size_t chunkLength = pos - chunkBegin;
+            str.append(doc.substr(chunkBegin, chunkLength));
+        }
+        else if (pos == doc.size())
+            throw JSONParseError("cannot find end of string, which start at position " + std::to_string(strBegin));
+
+        ++pos; // 跳过右引号
+        return str;
+    }
+    /*
+     * end JSONStringParser
+     */
+
+    /*
      * JSON Parser
      */
     class Parser
@@ -39,7 +132,6 @@ namespace JSONpp
         JSONValue parse_string();
         JSONValue parse_array();
         JSONValue parse_object();
-
 
     public:
         Parser() = delete;
@@ -147,24 +239,14 @@ namespace JSONpp
     }
 
     JSONValue Parser::parse_string()
-    { // 还不能处理转义字符
-        bool is_escape = false;
-        auto start = ++pos; // 字符串起点, 跳过左引号
-        while (pos < doc.size() && doc[pos] != '"')
-        {
-            ++pos;
-        }
-        if (pos == doc.size())
-            throw JSONParseError("cannot find end of string, which start at position " + std::to_string(start - 1));
-        auto end = pos++; // 跳过右引号
-
-        return {std::string(doc.substr(start, end - start))};
+    {
+        return JSONStringParser(doc, pos).parse();
     }
 
     JSONValue Parser::parse_array()
     {
         JArray arr;
-        auto start = pos++;// 跳过左 [
+        auto start = pos++; // 跳过左 [
         skip_whitespace();
         while (pos < doc.size() && doc[pos] != ']')
         {
@@ -188,7 +270,7 @@ namespace JSONpp
     JSONValue Parser::parse_object()
     {
         JObject obj;
-        auto start = pos++;// 跳过左 {
+        auto start = pos++; // 跳过左 {
 
         skip_whitespace();
         while (pos < doc.size() && doc[pos] != '}')
@@ -242,6 +324,7 @@ namespace JSONpp
 #endif
         return std::nullopt;
     }
+
     /*
      * end JSON Parser
      */
@@ -346,7 +429,7 @@ namespace JSONpp
         return as_impl<JObject>(value, "object");
     }
     /*
-     * endasserted accessor
+     * end asserted accessor
      */
 
     /*
@@ -383,23 +466,30 @@ namespace JSONpp
             char ch = *badChar;
             switch (ch)
             {
-                case '\"': os.write("\\\"", 2); break;
-                case '\\': os.write("\\\\", 2); break;
+            case '\"': os.write("\\\"", 2);
+                break;
+            case '\\': os.write("\\\\", 2);
+                break;
 #ifdef ESCAPE_FORWARD_SLASH
-                case '/': os.write("\\/", 2); break;
+            case '/': os.write("\\/", 2); break;
 #endif
-                case '\b': os.write("\\b", 2); break; // \x08
-                case '\f': os.write("\\f", 2); break; // \x0C
-                case '\n': os.write("\\n", 2); break; // \x0A
-                case '\r': os.write("\\r", 2); break; // \x0D
-                case '\t': os.write("\\t", 2); break; // \x09
-                default:
-                    {
-                        char buf[7]{};
-                        std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned short>(ch));
-                        os.write(buf, 6); // \uXXXX一定是6字符
-                        break;
-                    }
+            case '\b': os.write("\\b", 2);
+                break; // \x08
+            case '\f': os.write("\\f", 2);
+                break; // \x0C
+            case '\n': os.write("\\n", 2);
+                break; // \x0A
+            case '\r': os.write("\\r", 2);
+                break; // \x0D
+            case '\t': os.write("\\t", 2);
+                break; // \x09
+            default:
+                {
+                    char buf[7]{};
+                    std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned short>(ch));
+                    os.write(buf, 6); // \uXXXX一定是6字符
+                    break;
+                }
             }
         }
 
@@ -419,7 +509,8 @@ namespace JSONpp
                 if constexpr (std::is_same_v<T, std::int64_t> || std::is_same_v<T, double>)
                     return os << v;
                 if constexpr (std::is_same_v<T, std::string>)
-                { // now unreliable, cannot parse escape characters
+                {
+                    // now unreliable, cannot parse escape characters
                     return escape_string(os, v);
                 }
                 if constexpr (std::is_same_v<T, JArray>)
@@ -455,6 +546,10 @@ namespace JSONpp
             }, val.value
         );
     }
+
+    /*
+     * end stringifier
+     */
 
     std::string JSONValue::stringify(bool _prettify)
     {

@@ -3,3 +3,4 @@ reference.cpp
 reference.exe
 .idea
 .clang-tidy
+tests/.

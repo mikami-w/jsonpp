@@ -159,6 +159,7 @@ namespace JSONpp
 
     JSONValue Parser::parse_value()
     {
+        // TODO: FATAL BUG: cannot parse escaped quotation marks correctly
         // 调用该函数之前与之后均调用了 skip_whitespace()
         char ch = doc[pos];
         switch (ch)
@@ -510,7 +511,6 @@ namespace JSONpp
                     return os << v;
                 if constexpr (std::is_same_v<T, std::string>)
                 {
-                    // now unreliable, cannot parse escape characters
                     return escape_string(os, v);
                 }
                 if constexpr (std::is_same_v<T, JArray>)

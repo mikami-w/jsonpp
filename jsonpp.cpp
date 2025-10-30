@@ -50,7 +50,7 @@ namespace JSONpp
         str.reserve(doc.size());
 
         bool isEscaping = false;
-        while (pos < doc.size() && doc[pos] != '"')
+        while (pos < doc.size() && ((doc[pos] != '\"') || (isEscaping && doc[pos] == '\"')))
         {
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
             if (doc[pos] < 0x20)
@@ -159,7 +159,6 @@ namespace JSONpp
 
     JSONValue Parser::parse_value()
     {
-        // TODO: FATAL BUG: cannot parse escaped quotation marks correctly
         // 调用该函数之前与之后均调用了 skip_whitespace()
         char ch = doc[pos];
         switch (ch)

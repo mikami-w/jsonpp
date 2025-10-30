@@ -3,6 +3,5 @@ reference.cpp
 reference.exe
 .idea
 .clang-tidy
-tests/.gene*
 tests/error_handling
 tests/usability

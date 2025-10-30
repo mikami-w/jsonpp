@@ -41,7 +41,7 @@ namespace JSONpp
     };
 
     JSONStringParser::hex4_result JSONStringParser::parse_hex4(std::string_view num)
-    { // TODO: 检查num是否真的是个hex
+    {
         std::int16_t result;
         auto [ptr, ec] = std::from_chars(num.data(), num.data() + 4, result, 16);
         if (ec == std::errc() && ptr == num.data() + num.size())

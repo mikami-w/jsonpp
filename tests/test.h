@@ -67,18 +67,28 @@ namespace Test
     inline void test_error_handling()
     {
         std::cerr << "========== ERROR HANDLING TEST ==========" << std::endl;
+        int errors = 0;
         for (auto const& file
             : fs::directory_iterator(testFilePath_errorHandling))
         {
             try
             {
-                JSONpp::parse(readFileToString(file.path().string()));
+                auto j = JSONpp::parse(readFileToString(file.path().string()));
+                if (!j.has_value())
+                {
+                    std::cerr << "Error occurred in file " << file.path().filename() << std::endl;
+                    std::cerr << "Empty Document." << std::endl;
+                    ++errors;
+                }
+
             } catch (std::exception& e)
             {
                 std::cerr << "Error occurred in file " << file.path().filename() << std::endl;
-                std::cerr << e.what() << std::endl;
+                // std::cerr << e.what() << std::endl;
+                ++errors;
             }
         }
+        std::cerr << std::endl << errors << " errors was found." << std::endl;
         std::cerr << "========== ERROR HANDLING TEST END ==========" << std::endl;
     }
 };

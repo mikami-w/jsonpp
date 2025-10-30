@@ -26,7 +26,13 @@ namespace JSONpp
         std::string_view doc;
         size_t& pos;
 
-        static std::int16_t parse_hex4(std::string_view num);
+        struct hex4_result
+        {
+            std::int16_t number = 0;
+            bool error_occurred = false;
+        };
+
+        static hex4_result parse_hex4(std::string_view num);
 
     public:
         JSONStringParser(std::string_view _doc, size_t& _pos): doc(_doc), pos(_pos) {}
@@ -34,11 +40,13 @@ namespace JSONpp
 
     };
 
-    std::int16_t JSONStringParser::parse_hex4(std::string_view num)
+    JSONStringParser::hex4_result JSONStringParser::parse_hex4(std::string_view num)
     { // TODO: 检查num是否真的是个hex
         std::int16_t result;
-        std::from_chars(num.data(), num.data() + 4, result, 16);
-        return result;
+        auto [ptr, ec] = std::from_chars(num.data(), num.data() + 4, result, 16);
+        if (ec == std::errc() && ptr == num.data() + num.size())
+            return {result, false};
+        return {0, true};
     }
 
     std::string JSONStringParser::parse()
@@ -50,7 +58,7 @@ namespace JSONpp
         str.reserve(doc.size());
 
         bool isEscaping = false;
-        while (pos < doc.size() && ((doc[pos] != '\"') || (isEscaping && doc[pos] == '\"')))
+        while (pos < doc.size() && (doc[pos] != '\"' || (doc[pos] == '\"' && isEscaping)))
         {
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
             if (doc[pos] < 0x20)
@@ -72,6 +80,10 @@ namespace JSONpp
                 case 't': str.append("\t"); ++pos; break;
                 case 'u':
                     { // TODO: 解析 utf-16 代理, 没做呢
+                        ++pos;
+                        auto [code, err] = parse_hex4(doc.substr(pos, 4));
+                        if (err)
+                            throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", pos);
                         pos += 4;
                         break;
                     }

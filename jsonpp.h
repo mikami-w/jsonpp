@@ -148,7 +148,7 @@ namespace JSONpp{
         // 流自带将需要转义的字符添加 \ (实现其转义)的功能, 该过程发生在从内存到流的过程中
         friend std::ostream& operator<<(std::ostream& os, JSONValue const& val);
 
-        std::string stringify(bool _prettify = false);
+        std::string stringify() const;
 
     }; // class JSONValue
 

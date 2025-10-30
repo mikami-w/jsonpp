@@ -550,7 +550,7 @@ namespace JSONpp
      * end stringifier
      */
 
-    std::string JSONValue::stringify(bool _prettify)
+    std::string JSONValue::stringify() const
     {
         std::stringstream ss;
         ss << *this;

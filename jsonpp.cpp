@@ -114,7 +114,7 @@ namespace JSONpp
             str.append(doc.substr(chunkBegin, chunkLength));
         }
         else if (pos == doc.size())
-            throw JSONParseError("cannot find end of string, which start at position " + std::to_string(strBegin));
+            throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
         ++pos; // 跳过右引号
         return str;
@@ -274,7 +274,7 @@ namespace JSONpp
             skip_whitespace();
         }
         if (doc[pos++] != ']') // 跳过右 ]
-            throw JSONParseError("cannot find the end of array, which start at position " + std::to_string(start));
+            throw JSONParseError("Cannot find the end of array, which start at position " + std::to_string(start));
 
         return {arr};
     }
@@ -290,7 +290,7 @@ namespace JSONpp
             auto key = parse_value();
 
             if (!key.is_string()) [[unlikely]]
-                throw JSONTypeError("key of an object must be string");
+                throw JSONTypeError("Key of an object must be string");
 
             skip_whitespace();
             if (doc[pos] != ':')
@@ -311,7 +311,7 @@ namespace JSONpp
             skip_whitespace();
         }
         if (doc[pos++] != '}')
-            throw JSONParseError("cannot find the end of object, which start at position ", start);
+            throw JSONParseError("Cannot find the end of object, which start at position ", start);
 
         return {obj};
     }

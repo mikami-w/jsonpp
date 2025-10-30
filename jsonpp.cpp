@@ -271,7 +271,10 @@ namespace JSONpp
             else if (doc[pos] != ',')
                 throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
             ++pos; // 跳过 ','
+
             skip_whitespace();
+            if (doc[pos] == ']')
+                throw JSONParseError("Expected value after comma, but found ']' instead", pos);
         }
         if (doc[pos++] != ']') // 跳过右 ]
             throw JSONParseError("Cannot find the end of array, which start at position " + std::to_string(start));
@@ -306,9 +309,11 @@ namespace JSONpp
                 break;
             else if (doc[pos] != ',')
                 throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
-            ++pos;
+            ++pos; // skip comma
 
             skip_whitespace();
+            if (doc[pos] == '}')
+                throw JSONParseError("Expected value after comma, but found '}' instead", pos);
         }
         if (doc[pos++] != '}')
             throw JSONParseError("Cannot find the end of object, which start at position ", start);

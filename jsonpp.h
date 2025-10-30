@@ -14,6 +14,7 @@
 #include <type_traits>
 
 #include "jsonpp.h"
+
 namespace JSONpp{
     class JSONValue;
 

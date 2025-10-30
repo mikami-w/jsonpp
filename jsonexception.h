@@ -14,7 +14,7 @@ namespace JSONpp
     class JSONParseError : public std::runtime_error
     {
     public:
-        static constexpr const char* UNPARSABLE_MESSAGE = "Unparsable character(s)";
+        static constexpr char const* UNPARSABLE_MESSAGE = "Unparsable character(s)";
 
         JSONParseError(std::string const& msg):
             std::runtime_error(msg) {}

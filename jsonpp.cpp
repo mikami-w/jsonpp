@@ -344,7 +344,7 @@ namespace JSONpp
     >;
 
     template <typename T>
-    static T& as_impl(_Json_Tp& v, const char* typeName)
+    static T& as_impl(_Json_Tp& v, char const* typeName)
     {
         try
         {
@@ -357,7 +357,7 @@ namespace JSONpp
     }
 
     template <typename T>
-    static T const& as_impl(const _Json_Tp& v, const char* typeName)
+    static T const& as_impl(const _Json_Tp& v, char const* typeName)
     {
         try
         {

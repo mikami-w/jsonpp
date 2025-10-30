@@ -22,6 +22,7 @@ namespace JSONpp{
     using JArray = std::vector<JSONValue>;
     using JObject = std::unordered_map<std::string, JSONValue>;
 
+    // TODO: C++17兼容
     template<typename T>
     concept JsonValueType =
         std::is_same_v<T, JNull> ||
@@ -54,6 +55,7 @@ namespace JSONpp{
 
         JSONValue() = default;
         JSONValue(std::nullptr_t): value(JNull()) {}
+        // TODO: C++17兼容
         // 对整形的构造函数(含char, 会将char作为整形构造)
         template <typename T_Integer>
             requires std::is_integral_v<T_Integer>
@@ -71,6 +73,7 @@ namespace JSONpp{
          * end constructors
          */
 
+        // TODO: C++17兼容
         // operator =
         template<JsonValueType T>
         JSONValue& operator=(T val) { value = std::move(val); return *this; }

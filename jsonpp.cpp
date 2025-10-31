@@ -26,6 +26,10 @@ namespace JSONpp
         std::string_view doc;
         size_t& pos;
 
+        char peek() const { return doc[pos]; }
+        char advance() { return doc[pos++]; }
+        size_t get_pos() const { return pos; }
+
         struct hex4_result
         {
             std::int16_t number = 0;

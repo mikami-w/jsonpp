@@ -114,7 +114,7 @@ namespace JSONpp
             advance();
         }
 
-        if (peek() == '"')
+        if (peek() == '\"')
         { // 字符串结束, 写入最后一个块
             size_t chunkLength = get_pos() - chunkBegin;
             str.append(doc.substr(chunkBegin, chunkLength));

@@ -131,6 +131,10 @@ namespace JSONpp
         size_t pos;
         std::string_view doc;
 
+        char peek() const { return doc[pos]; }
+        char advance() { return doc[pos++]; }
+        size_t get_pos() const { return pos; }
+
         static bool is_whitespace(char ch);
 
         void skip_whitespace(); // 跳过从 pos 开始的空白字符, 使 pos 指向调用函数后的第一个非空白字符
@@ -155,7 +159,6 @@ namespace JSONpp
 
     bool Parser::is_whitespace(char ch)
     {
-        // static const char ws[]{' ', '\n', '\r', '\t'};
         return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
     }
 

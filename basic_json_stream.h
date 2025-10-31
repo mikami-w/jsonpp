@@ -21,6 +21,17 @@ namespace JSONpp
     template<typename T>
     inline constexpr bool isSizedStream_v = isSizedStream<T>::value;
 
+    // 是否是随机访问流
+    template<typename T, typename = void>
+    struct isSeekableStream: std::false_type {};
+
+    template<typename T>
+    struct isSeekableStream<T, std::void_t<decltype(std::declval<T>().seek(0))>>
+        : std::true_type {};
+
+    template<typename T>
+    inline constexpr bool isSeekableStream_v = isSeekableStream<T>::value;
+
     // 定义解析器需要的流
 #if __cplusplus >= 202002L
     template<typename T>

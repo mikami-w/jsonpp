@@ -20,14 +20,13 @@ namespace JSONpp
 
     // 定义解析器需要的流
 #if __cplusplus >= 202002L
-        // 定义了解析器需要一个什么样的流
-        template<typename T>
-        concept JsonStream = requires(T stream)
-        {
-            { stream.peek() } -> std::same_as<char>;  // 必须能 "偷看"
-            { stream.advance() } -> std::same_as<char>; // 必须能 "前进"
-            { stream.get_pos() } -> std::same_as<size_t>; // 必须能报告位置
-        };
+    template<typename T>
+    concept JsonStream = requires(T stream)
+    {
+        { stream.peek() } -> std::same_as<char>;  // 必须能 "偷看"
+        { stream.advance() } -> std::same_as<char>; // 必须能 "前进"
+        { stream.get_pos() } -> std::same_as<size_t>; // 必须能报告位置
+    };
 #else
     namespace _details
     {

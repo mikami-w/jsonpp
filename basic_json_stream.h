@@ -1,0 +1,58 @@
+//
+// Created on 2025/10/31.
+//
+
+#ifndef JSONPP_BASIC_JSON_STREAM_H
+#define JSONPP_BASIC_JSON_STREAM_H
+
+#include <cstddef>
+#include <type_traits>
+
+namespace JSONpp
+{
+#if __cplusplus >= 202002L
+        // 定义了解析器需要一个什么样的流
+        template<typename T>
+        concept JsonStreamImpl = requires(T stream)
+        {
+            { stream.peek() } -> std::same_as<char>;  // 必须能 "偷看"
+            { stream.advance() } -> std::same_as<char>; // 必须能 "前进"
+            { stream.get_pos() } -> std::same_as<size_t>; // 必须能报告位置(用于错误)
+        };
+#else
+    namespace _details
+    {
+        // 默认无效
+        template<typename T, typename = void>
+        struct isJsonStreamImpl: std::false_type {};
+
+        // 有效偏特化
+        template<typename T>
+        struct isJsonStreamImpl<T, std::void_t<
+            decltype(std::declval<T>().peek()),
+            decltype(std::declval<T>().advance()),
+            decltype(std::declval<T>().get_pos())
+        >>
+        {
+        private:
+            using peek_return_t = decltype(std::declval<T>().peek());
+            using advance_return_t = decltype(std::declval<T>().advance());
+            using get_pos_return_t = decltype(std::declval<T>().get_pos());
+
+        public:
+            static constexpr bool value = std::conjunction_v<
+                std::is_same<peek_return_t, char>,
+                std::is_same<advance_return_t, char>,
+                std::is_same<get_pos_return_t, size_t>
+            >;
+        };
+    }
+
+    template<typename T>
+    struct isJsonStream: _details::isJsonStreamImpl<T> {};
+
+    template<typename T>
+    inline constexpr bool isJsonStream_v = isJsonStream<T>::value;
+#endif
+}
+#endif //JSONPP_BASIC_JSON_STREAM_H

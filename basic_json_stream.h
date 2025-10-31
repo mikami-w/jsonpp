@@ -10,6 +10,15 @@
 
 namespace JSONpp
 {
+    // 用于区分流能否直接获取完整大小
+    template<typename T, typename = void>
+    struct isSizedStream: std::false_type {};
+
+    template<typename T>
+    struct isSizedStream<T, std::void_t<decltype(std::declval<T>().size())>>
+        : std::true_type {};
+
+    // 定义解析器需要的流
 #if __cplusplus >= 202002L
         // 定义了解析器需要一个什么样的流
         template<typename T>

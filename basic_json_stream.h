@@ -39,7 +39,7 @@ namespace JSONpp
     {
         { stream.peek() } -> std::same_as<char>;  // 必须能 "偷看"
         { stream.advance() } -> std::same_as<char>; // 必须能 "前进"
-        { stream.get_pos() } -> std::same_as<size_t>; // 必须能报告位置
+        { stream.tell_pos() } -> std::same_as<size_t>; // 必须能报告位置
     };
 #else
     namespace _details
@@ -53,13 +53,13 @@ namespace JSONpp
         struct isJsonStreamImpl<T, std::void_t<
             decltype(std::declval<T>().peek()),
             decltype(std::declval<T>().advance()),
-            decltype(std::declval<T>().get_pos())
+            decltype(std::declval<T>().tell_pos())
         >>
         {
         private:
             using peek_return_t = decltype(std::declval<T>().peek());
             using advance_return_t = decltype(std::declval<T>().advance());
-            using get_pos_return_t = decltype(std::declval<T>().get_pos());
+            using get_pos_return_t = decltype(std::declval<T>().tell_pos());
 
         public:
             static constexpr bool value = std::conjunction_v<

@@ -54,6 +54,7 @@ namespace JSONpp{
         explicit JSONValue(bool val): value(val) {};
 
         JSONValue() = default;
+        JSONValue(JNull): value(JNull()) {}
         JSONValue(std::nullptr_t): value(JNull()) {}
         // TODO: C++17兼容
         // 对整形的构造函数(含char, 会将char作为整形构造)

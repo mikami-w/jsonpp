@@ -26,15 +26,21 @@ namespace JSONpp
     template<typename StreamT>
     class JSONStringParser
     {
-        static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream");
+        static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
 
-        std::string_view doc;
-        size_t& pos;
+        StreamT& m_stream;
 
-        char peek() const { return doc[pos]; }
-        char advance() { return doc[pos++]; }
-        char advance(size_t step) { pos += step; return doc[pos]; }
-        size_t get_pos() const { return pos; }
+        char peek() const { return m_stream.peek(); }
+        char advance() { return m_stream.advance(); }
+        size_t tell_pos() const { return m_stream.tell_pos(); }
+
+        template<std::enable_if_t<isSizedStream_v<StreamT>, int> = 0>
+        size_t size() const { return m_stream.size(); }
+
+        template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
+        char seek(size_t step) { return m_stream.seek(step); }
+
+        bool end() const;
 
         struct hex4_result
         {
@@ -45,10 +51,26 @@ namespace JSONpp
         static hex4_result parse_hex4(std::string_view num);
 
     public:
-        JSONStringParser(std::string_view _doc, size_t& _pos): doc(_doc), pos(_pos) {}
+        JSONStringParser(StreamT& stream): m_stream(stream) {}
         std::string parse();
 
     };
+
+    template <typename StreamT>
+    bool JSONStringParser<StreamT>::end() const
+    {
+        if constexpr (isSeekableStream_v<StreamT>)
+        {
+#ifndef NDEBUG
+            assert(m_stream.tell_pos() <= m_stream.size(), "WTF pos > m_stream.size()");
+#endif
+            return m_stream.tell_pos() == m_stream.size();
+        }
+        else
+        { // TODO: 这玩意怎么写?
+            return m_stream.eof();
+        }
+    }
 
     template<typename StreamT>
     typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::parse_hex4(std::string_view num)
@@ -63,22 +85,23 @@ namespace JSONpp
     template<typename StreamT>
     std::string JSONStringParser<StreamT>::parse()
     { // TODO: 处理转义字符
-        size_t const strBegin = get_pos(); // 字符串起点, 跳过左引号
+        size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
         advance();
-        size_t chunkBegin = get_pos();
+        size_t chunkBegin = tell_pos();
 
         std::string str;
         if constexpr (isSizedStream_v<StreamT>)
         { // 如果能直接得到整个流的大小则直接预留空间
-            str.reserve(doc.size());
+            str.reserve(size());
         }
 
+        // TODO: 分别为随机访问流和顺序流编写parse代码(前者分块写入, 后者逐字符)
         bool isEscaping = false;
-        while (get_pos() < doc.size() && (peek() != '\"' || (peek() == '\"' && isEscaping)))
+        while (!end() && (peek() != '\"' || (peek() == '\"' && isEscaping)))
         {
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
             if (peek() < 0x20)
-                throw JSONParseError("Unescaped control character in string", get_pos());
+                throw JSONParseError("Unescaped control character in string", tell_pos());
 
             if (isEscaping)
             {
@@ -97,16 +120,16 @@ namespace JSONpp
                 case 'u':
                     { // TODO: 解析 utf-16 代理, 没做呢
                         advance();
-                        auto [code, err] = parse_hex4(doc.substr(get_pos(), 4));
+                        auto [code, err] = parse_hex4(doc.substr(tell_pos(), 4));
                         if (err)
-                            throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", get_pos());
-                        advance(4);
+                            throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
+                        seek(4);
                         break;
                     }
                 default:
-                    throw JSONParseError("Invalid escape character", get_pos());
+                    throw JSONParseError("Invalid escape character", tell_pos());
                 }
-                chunkBegin = get_pos();
+                chunkBegin = tell_pos();
                 isEscaping = false;
                 continue;
             }
@@ -114,7 +137,7 @@ namespace JSONpp
             if (peek() == '\\' && !isEscaping)
             {
                 isEscaping = true;
-                size_t chunkLength = get_pos() - chunkBegin;
+                size_t chunkLength = tell_pos() - chunkBegin;
                 str.append(doc.substr(chunkBegin, chunkLength));
                 advance();
                 continue;
@@ -126,10 +149,10 @@ namespace JSONpp
 
         if (peek() == '\"')
         { // 字符串结束, 写入最后一个块
-            size_t chunkLength = get_pos() - chunkBegin;
+            size_t chunkLength = tell_pos() - chunkBegin;
             str.append(doc.substr(chunkBegin, chunkLength));
         }
-        else if (get_pos() == doc.size())
+        else if (tell_pos() == doc.size())
             throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
         advance(); // 跳过右引号
@@ -146,13 +169,15 @@ namespace JSONpp
     template<typename StreamT>
     class Parser
     {
+        static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
+
         size_t pos;
         std::string_view doc;
 
         char peek() const { return doc[pos]; }
         char advance() { return doc[pos++]; }
         char advance(size_t step) { pos += step; return doc[pos]; }
-        size_t get_pos() const { return pos; }
+        size_t tell_pos() const { return pos; }
 
         static bool is_whitespace(char ch);
 
@@ -185,7 +210,7 @@ namespace JSONpp
     template<typename StreamT>
     void Parser<StreamT>::skip_whitespace()
     {
-        if (get_pos() >= doc.size())
+        if (tell_pos() >= doc.size())
             return; // 到达文档尽头
 
         if (!is_whitespace(peek()))
@@ -215,15 +240,15 @@ namespace JSONpp
         default:
             if ((ch >= '0' && ch <= '9') || ch == '-')
                 return parse_number();
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
         }
     }
 
     template<typename StreamT>
     JSONValue Parser<StreamT>::parse_null()
     {
-        if (doc.substr(get_pos(), 4) != "null")
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+        if (doc.substr(tell_pos(), 4) != "null")
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
         advance(4);
         return {};
     }
@@ -231,8 +256,8 @@ namespace JSONpp
     template<typename StreamT>
     JSONValue Parser<StreamT>::parse_true()
     {
-        if (doc.substr(get_pos(), 4) != "true")
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+        if (doc.substr(tell_pos(), 4) != "true")
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
     advance(4);
         return JSONValue(true);
     }
@@ -240,8 +265,8 @@ namespace JSONpp
     template<typename StreamT>
     JSONValue Parser<StreamT>::parse_false()
     {
-        if (doc.substr(get_pos(), 5) != "false")
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+        if (doc.substr(tell_pos(), 5) != "false")
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
         advance(5);
         return JSONValue(false);
     }
@@ -249,7 +274,7 @@ namespace JSONpp
     template<typename StreamT>
     JSONValue Parser<StreamT>::parse_number()
     {
-        size_t start = get_pos();
+        size_t start = tell_pos();
         while (isdigit(peek())
             || peek() == '.'
             || peek() == '-'
@@ -258,7 +283,7 @@ namespace JSONpp
             || peek() == 'E')
             advance(); // 停在第 1 个不可能是数字字符的位置
 
-        auto num = doc.substr(start, get_pos() - start);
+        auto num = doc.substr(start, tell_pos() - start);
         std::int64_t val_i{};
         auto res_i = std::from_chars(num.data(), num.data() + num.size(), val_i);
         if (res_i.ptr == num.data() + num.size() && res_i.ec == std::errc()) // 成功
@@ -289,10 +314,10 @@ namespace JSONpp
     JSONValue Parser<StreamT>::parse_array()
     {
         JArray arr;
-        auto start = get_pos(); // 跳过左 [
+        auto start = tell_pos(); // 跳过左 [
         advance();
         skip_whitespace();
-        while (get_pos() < doc.size() && peek() != ']')
+        while (tell_pos() < doc.size() && peek() != ']')
         {
             arr.push_back(parse_value());
             skip_whitespace();
@@ -301,12 +326,12 @@ namespace JSONpp
             if (peek() == ']')
                 break;
             else if (peek() != ',')
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
             advance(); // 跳过 ','
 
             skip_whitespace();
             if (peek() == ']')
-                throw JSONParseError("Expected value after comma, but found ']' instead", get_pos());
+                throw JSONParseError("Expected value after comma, but found ']' instead", tell_pos());
         }
         if (advance() != ']') // 跳过右 ]
             throw JSONParseError("Cannot find the end of array, which start at position " + std::to_string(start));
@@ -318,10 +343,10 @@ namespace JSONpp
     JSONValue Parser<StreamT>::parse_object()
     {
         JObject obj;
-        auto start = get_pos(); // 跳过左 {
+        auto start = tell_pos(); // 跳过左 {
         advance();
         skip_whitespace();
-        while (get_pos() < doc.size() && peek() != '}')
+        while (tell_pos() < doc.size() && peek() != '}')
         {
             auto key = parse_value();
 
@@ -330,7 +355,7 @@ namespace JSONpp
 
             skip_whitespace();
             if (peek() != ':')
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
             advance();
 
             skip_whitespace();
@@ -341,12 +366,12 @@ namespace JSONpp
             if (peek() == '}')
                 break;
             else if (peek() != ',')
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
             advance(); // skip comma
 
             skip_whitespace();
             if (peek() == '}')
-                throw JSONParseError("Expected value after comma, but found '}' instead", get_pos());
+                throw JSONParseError("Expected value after comma, but found '}' instead", tell_pos());
         }
         if (advance() != '}')
             throw JSONParseError("Cannot find the end of object, which start at position ", start);
@@ -358,20 +383,20 @@ namespace JSONpp
     std::optional<JSONValue> Parser<StreamT>::parse()
     {
         skip_whitespace();
-        if (get_pos() == doc.size()) // doc 为空
+        if (tell_pos() == doc.size()) // doc 为空
             return std::nullopt;
 
         auto val = parse_value();
         skip_whitespace();
 
-        if (get_pos() == doc.size()) // 表示恰好解析整个文档
+        if (tell_pos() == doc.size()) // 表示恰好解析整个文档
             return val;
 
-        if (get_pos() < doc.size())
+        if (tell_pos() < doc.size())
             throw JSONParseError("Unexpected character(s) after JSON value");
 #ifndef NDEBUG
-        if (get_pos() > doc.size())
-            throw JSONParseError("WTF get_pos() is beyond size of doc " + std::to_string(doc.size()), get_pos());
+        if (tell_pos() > doc.size())
+            throw JSONParseError("WTF tell_pos() is beyond size of doc " + std::to_string(doc.size()), tell_pos());
 #endif
         return std::nullopt;
     }

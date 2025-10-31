@@ -28,6 +28,7 @@ namespace JSONpp
 
         char peek() const { return doc[pos]; }
         char advance() { return doc[pos++]; }
+        char advance(size_t step) { pos += step; return doc[pos]; }
         size_t get_pos() const { return pos; }
 
         struct hex4_result
@@ -55,72 +56,73 @@ namespace JSONpp
 
     std::string JSONStringParser::parse()
     { // TODO: 处理转义字符
-        size_t const strBegin = pos++; // 字符串起点, 跳过左引号
-        size_t chunkBegin = pos;
+        size_t const strBegin = get_pos(); // 字符串起点, 跳过左引号
+        advance();
+        size_t chunkBegin = get_pos();
 
         std::string str;
         str.reserve(doc.size());
 
         bool isEscaping = false;
-        while (pos < doc.size() && (doc[pos] != '\"' || (doc[pos] == '\"' && isEscaping)))
+        while (get_pos() < doc.size() && (peek() != '\"' || (peek() == '\"' && isEscaping)))
         {
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
-            if (doc[pos] < 0x20)
-                throw JSONParseError("Unescaped control character in string", pos);
+            if (peek() < 0x20)
+                throw JSONParseError("Unescaped control character in string", get_pos());
 
             if (isEscaping)
             {
-                switch (doc[pos])
+                switch (peek())
                 {
-                case '\"': str.append("\""); ++pos; break;
-                case '\\': str.append("\\"); ++pos; break;
+                case '\"': str.append("\""); advance(); break;
+                case '\\': str.append("\\"); advance(); break;
 // #ifdef ESCAPE_FORWARD_SLASH
-//                  case '/': str.append("/"); ++pos; break;
+//                  case '/': str.append("/"); advance(); break;
 // #endif
-                case 'b': str.append("\b"); ++pos; break;
-                case 'f': str.append("\f"); ++pos; break;
-                case 'n': str.append("\n"); ++pos; break;
-                case 'r': str.append("\r"); ++pos; break;
-                case 't': str.append("\t"); ++pos; break;
+                case 'b': str.append("\b"); advance(); break;
+                case 'f': str.append("\f"); advance(); break;
+                case 'n': str.append("\n"); advance(); break;
+                case 'r': str.append("\r"); advance(); break;
+                case 't': str.append("\t"); advance(); break;
                 case 'u':
                     { // TODO: 解析 utf-16 代理, 没做呢
-                        ++pos;
-                        auto [code, err] = parse_hex4(doc.substr(pos, 4));
+                        advance();
+                        auto [code, err] = parse_hex4(doc.substr(get_pos(), 4));
                         if (err)
-                            throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", pos);
-                        pos += 4;
+                            throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", get_pos());
+                        advance(4);
                         break;
                     }
                 default:
-                    throw JSONParseError("Invalid escape character", pos);
+                    throw JSONParseError("Invalid escape character", get_pos());
                 }
-                chunkBegin = pos;
+                chunkBegin = get_pos();
                 isEscaping = false;
                 continue;
             }
 
-            if (doc[pos] == '\\' && !isEscaping)
+            if (peek() == '\\' && !isEscaping)
             {
                 isEscaping = true;
-                size_t chunkLength = pos - chunkBegin;
+                size_t chunkLength = get_pos() - chunkBegin;
                 str.append(doc.substr(chunkBegin, chunkLength));
-                ++pos;
+                advance();
                 continue;
             }
 
             // 普通字符, 指针前进
-            ++pos;
+            advance();
         }
 
-        if (doc[pos] == '"')
+        if (peek() == '"')
         { // 字符串结束, 写入最后一个块
-            size_t chunkLength = pos - chunkBegin;
+            size_t chunkLength = get_pos() - chunkBegin;
             str.append(doc.substr(chunkBegin, chunkLength));
         }
-        else if (pos == doc.size())
+        else if (get_pos() == doc.size())
             throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
-        ++pos; // 跳过右引号
+        advance(); // 跳过右引号
         return str;
     }
     /*
@@ -137,6 +139,7 @@ namespace JSONpp
 
         char peek() const { return doc[pos]; }
         char advance() { return doc[pos++]; }
+        char advance(size_t step) { pos += step; return doc[pos]; }
         size_t get_pos() const { return pos; }
 
         static bool is_whitespace(char ch);
@@ -168,18 +171,18 @@ namespace JSONpp
 
     void Parser::skip_whitespace()
     {
-        if (pos >= doc.size())
+        if (get_pos() >= doc.size())
             return; // 到达文档尽头
 
-        if (!is_whitespace(doc[pos]))
+        if (!is_whitespace(peek()))
             return;
-        while (is_whitespace(doc[++pos]));
+        while (is_whitespace((advance(), peek())));
     }
 
     JSONValue Parser::parse_value()
     {
         // 调用该函数之前与之后均调用了 skip_whitespace()
-        char ch = doc[pos];
+        char ch = peek();
         switch (ch)
         {
         case 'n':
@@ -197,46 +200,46 @@ namespace JSONpp
         default:
             if ((ch >= '0' && ch <= '9') || ch == '-')
                 return parse_number();
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
         }
     }
 
     JSONValue Parser::parse_null()
     {
-        if (doc.substr(pos, 4) != "null")
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
-        pos += 4;
+        if (doc.substr(get_pos(), 4) != "null")
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+        advance(4);
         return {};
     }
 
     JSONValue Parser::parse_true()
     {
-        if (doc.substr(pos, 4) != "true")
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
-        pos += 4;
+        if (doc.substr(get_pos(), 4) != "true")
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+    advance(4);
         return JSONValue(true);
     }
 
     JSONValue Parser::parse_false()
     {
-        if (doc.substr(pos, 5) != "false")
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
-        pos += 5;
+        if (doc.substr(get_pos(), 5) != "false")
+            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+        advance(5);
         return JSONValue(false);
     }
 
     JSONValue Parser::parse_number()
     {
-        size_t start = pos;
-        while (isdigit(doc[pos])
-            || doc[pos] == '.'
-            || doc[pos] == '-'
-            || doc[pos] == '+'
-            || doc[pos] == 'e'
-            || doc[pos] == 'E')
-            pos++; // 停在第 1 个不可能是数字字符的位置
+        size_t start = get_pos();
+        while (isdigit(peek())
+            || peek() == '.'
+            || peek() == '-'
+            || peek() == '+'
+            || peek() == 'e'
+            || peek() == 'E')
+            advance(); // 停在第 1 个不可能是数字字符的位置
 
-        auto num = doc.substr(start, pos - start);
+        auto num = doc.substr(start, get_pos() - start);
         std::int64_t val_i{};
         auto res_i = std::from_chars(num.data(), num.data() + num.size(), val_i);
         if (res_i.ptr == num.data() + num.size() && res_i.ec == std::errc()) // 成功
@@ -265,25 +268,26 @@ namespace JSONpp
     JSONValue Parser::parse_array()
     {
         JArray arr;
-        auto start = pos++; // 跳过左 [
+        auto start = get_pos(); // 跳过左 [
+        advance();
         skip_whitespace();
-        while (pos < doc.size() && doc[pos] != ']')
+        while (get_pos() < doc.size() && peek() != ']')
         {
             arr.push_back(parse_value());
             skip_whitespace();
 
             // json数组中对象以外的字符只能是空白字符或'['或']'或','
-            if (doc[pos] == ']')
+            if (peek() == ']')
                 break;
-            else if (doc[pos] != ',')
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
-            ++pos; // 跳过 ','
+            else if (peek() != ',')
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+            advance(); // 跳过 ','
 
             skip_whitespace();
-            if (doc[pos] == ']')
-                throw JSONParseError("Expected value after comma, but found ']' instead", pos);
+            if (peek() == ']')
+                throw JSONParseError("Expected value after comma, but found ']' instead", get_pos());
         }
-        if (doc[pos++] != ']') // 跳过右 ]
+        if (advance() != ']') // 跳过右 ]
             throw JSONParseError("Cannot find the end of array, which start at position " + std::to_string(start));
 
         return {arr};
@@ -292,10 +296,10 @@ namespace JSONpp
     JSONValue Parser::parse_object()
     {
         JObject obj;
-        auto start = pos++; // 跳过左 {
-
+        auto start = get_pos(); // 跳过左 {
+        advance();
         skip_whitespace();
-        while (pos < doc.size() && doc[pos] != '}')
+        while (get_pos() < doc.size() && peek() != '}')
         {
             auto key = parse_value();
 
@@ -303,26 +307,26 @@ namespace JSONpp
                 throw JSONTypeError("Key of an object must be string");
 
             skip_whitespace();
-            if (doc[pos] != ':')
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
-            ++pos;
+            if (peek() != ':')
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+            advance();
 
             skip_whitespace();
             auto val = parse_value();
             obj[key.as_string()] = val;
 
             skip_whitespace();
-            if (doc[pos] == '}')
+            if (peek() == '}')
                 break;
-            else if (doc[pos] != ',')
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, pos);
-            ++pos; // skip comma
+            else if (peek() != ',')
+                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
+            advance(); // skip comma
 
             skip_whitespace();
-            if (doc[pos] == '}')
-                throw JSONParseError("Expected value after comma, but found '}' instead", pos);
+            if (peek() == '}')
+                throw JSONParseError("Expected value after comma, but found '}' instead", get_pos());
         }
-        if (doc[pos++] != '}')
+        if (advance() != '}')
             throw JSONParseError("Cannot find the end of object, which start at position ", start);
 
         return {obj};
@@ -331,20 +335,20 @@ namespace JSONpp
     std::optional<JSONValue> Parser::parse()
     {
         skip_whitespace();
-        if (pos == doc.size()) // doc 为空
+        if (get_pos() == doc.size()) // doc 为空
             return std::nullopt;
 
         auto val = parse_value();
         skip_whitespace();
 
-        if (pos == doc.size()) // 表示恰好解析整个文档
+        if (get_pos() == doc.size()) // 表示恰好解析整个文档
             return val;
 
-        if (pos < doc.size())
+        if (get_pos() < doc.size())
             throw JSONParseError("Unexpected character(s) after JSON value");
 #ifndef NDEBUG
-        if (pos > doc.size())
-            throw JSONParseError("WTF pos is beyond size of doc " + std::to_string(doc.size()), pos);
+        if (get_pos() > doc.size())
+            throw JSONParseError("WTF get_pos() is beyond size of doc " + std::to_string(doc.size()), get_pos());
 #endif
         return std::nullopt;
     }

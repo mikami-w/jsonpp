@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <stdexcept>
 #include "jsonexception.h"
+#include "basic_json_stream.h"
+
 #ifndef NDEBUG
 #include <iostream>
 #include <sstream>
@@ -21,8 +23,11 @@ namespace JSONpp
     /*
      * JSONStringParser
      */
+    template<typename StreamT>
     class JSONStringParser
     {
+        static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream");
+
         std::string_view doc;
         size_t& pos;
 
@@ -45,7 +50,8 @@ namespace JSONpp
 
     };
 
-    JSONStringParser::hex4_result JSONStringParser::parse_hex4(std::string_view num)
+    template<typename StreamT>
+    typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::parse_hex4(std::string_view num)
     {
         std::int16_t result;
         auto [ptr, ec] = std::from_chars(num.data(), num.data() + 4, result, 16);
@@ -54,14 +60,18 @@ namespace JSONpp
         return {0, true};
     }
 
-    std::string JSONStringParser::parse()
+    template<typename StreamT>
+    std::string JSONStringParser<StreamT>::parse()
     { // TODO: 处理转义字符
         size_t const strBegin = get_pos(); // 字符串起点, 跳过左引号
         advance();
         size_t chunkBegin = get_pos();
 
         std::string str;
-        str.reserve(doc.size());
+        if constexpr (isSizedStream_v<StreamT>)
+        { // 如果能直接得到整个流的大小则直接预留空间
+            str.reserve(doc.size());
+        }
 
         bool isEscaping = false;
         while (get_pos() < doc.size() && (peek() != '\"' || (peek() == '\"' && isEscaping)))
@@ -132,6 +142,8 @@ namespace JSONpp
     /*
      * JSON Parser
      */
+
+    template<typename StreamT>
     class Parser
     {
         size_t pos;
@@ -164,12 +176,14 @@ namespace JSONpp
         std::optional<JSONValue> parse();
     };
 
-    bool Parser::is_whitespace(char ch)
+    template<typename StreamT>
+    bool Parser<StreamT>::is_whitespace(char ch)
     {
         return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
     }
 
-    void Parser::skip_whitespace()
+    template<typename StreamT>
+    void Parser<StreamT>::skip_whitespace()
     {
         if (get_pos() >= doc.size())
             return; // 到达文档尽头
@@ -179,7 +193,8 @@ namespace JSONpp
         while (is_whitespace((advance(), peek())));
     }
 
-    JSONValue Parser::parse_value()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_value()
     {
         // 调用该函数之前与之后均调用了 skip_whitespace()
         char ch = peek();
@@ -204,7 +219,8 @@ namespace JSONpp
         }
     }
 
-    JSONValue Parser::parse_null()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_null()
     {
         if (doc.substr(get_pos(), 4) != "null")
             throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
@@ -212,7 +228,8 @@ namespace JSONpp
         return {};
     }
 
-    JSONValue Parser::parse_true()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_true()
     {
         if (doc.substr(get_pos(), 4) != "true")
             throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
@@ -220,7 +237,8 @@ namespace JSONpp
         return JSONValue(true);
     }
 
-    JSONValue Parser::parse_false()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_false()
     {
         if (doc.substr(get_pos(), 5) != "false")
             throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, get_pos());
@@ -228,7 +246,8 @@ namespace JSONpp
         return JSONValue(false);
     }
 
-    JSONValue Parser::parse_number()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_number()
     {
         size_t start = get_pos();
         while (isdigit(peek())
@@ -260,12 +279,14 @@ namespace JSONpp
             throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, res_f.ptr - num.data());
     }
 
-    JSONValue Parser::parse_string()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_string()
     {
-        return JSONStringParser(doc, pos).parse();
+        return JSONStringParser<StreamT>(doc, pos).parse();
     }
 
-    JSONValue Parser::parse_array()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_array()
     {
         JArray arr;
         auto start = get_pos(); // 跳过左 [
@@ -293,7 +314,8 @@ namespace JSONpp
         return {arr};
     }
 
-    JSONValue Parser::parse_object()
+    template<typename StreamT>
+    JSONValue Parser<StreamT>::parse_object()
     {
         JObject obj;
         auto start = get_pos(); // 跳过左 {
@@ -332,7 +354,8 @@ namespace JSONpp
         return {obj};
     }
 
-    std::optional<JSONValue> Parser::parse()
+    template<typename StreamT>
+    std::optional<JSONValue> Parser<StreamT>::parse()
     {
         skip_whitespace();
         if (get_pos() == doc.size()) // doc 为空

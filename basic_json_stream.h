@@ -18,6 +18,9 @@ namespace JSONpp
     struct isSizedStream<T, std::void_t<decltype(std::declval<T>().size())>>
         : std::true_type {};
 
+    template<typename T>
+    inline constexpr bool isSizedStream_v = isSizedStream<T>::value;
+
     // 定义解析器需要的流
 #if __cplusplus >= 202002L
     template<typename T>

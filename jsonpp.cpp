@@ -120,7 +120,9 @@ namespace JSONpp
                 case 'u':
                     { // TODO: 解析 utf-16 代理, 没做呢
                         advance();
-                        auto [code, err] = parse_hex4(doc.substr(tell_pos(), 4));
+                        char buf[5]{};
+                        m_stream.read(buf, 4);
+                        auto [code, err] = parse_hex4(buf);
                         if (err)
                             throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
                         seek(4);
@@ -129,7 +131,12 @@ namespace JSONpp
                 default:
                     throw JSONParseError("Invalid escape character", tell_pos());
                 }
-                chunkBegin = tell_pos();
+
+                if constexpr (isSeekableStream_v<StreamT>)
+                { // 可随机访问流
+                    chunkBegin = tell_pos();
+                }
+                // 顺序流无需记录块起始位置, 因为是逐字节处理
                 isEscaping = false;
                 continue;
             }
@@ -137,22 +144,39 @@ namespace JSONpp
             if (peek() == '\\' && !isEscaping)
             {
                 isEscaping = true;
-                size_t chunkLength = tell_pos() - chunkBegin;
-                str.append(doc.substr(chunkBegin, chunkLength));
+                if constexpr (isSeekableStream_v<StreamT>)
+                { // 可随机访问流
+                    size_t chunkLength = tell_pos() - chunkBegin;
+                    str.append(m_stream.get_chunk(chunkBegin, chunkBegin + chunkLength));
+                }
+                // 顺序流只需跳过'\\'
                 advance();
                 continue;
             }
 
-            // 普通字符, 指针前进
-            advance();
+            if constexpr (isSeekableStream_v<StreamT>)
+            {
+                // 普通字符, 指针前进
+                advance();
+            }
+            else
+            {
+                // 顺序流, 逐字节处理
+                str.push_back(advance());
+            }
+
         }
 
         if (peek() == '\"')
-        { // 字符串结束, 写入最后一个块
-            size_t chunkLength = tell_pos() - chunkBegin;
-            str.append(doc.substr(chunkBegin, chunkLength));
+        {
+            if constexpr (isSeekableStream_v<Stream>)
+            {
+                // 字符串结束, 写入最后一个块
+                size_t chunkLength = tell_pos() - chunkBegin;
+                str.append(m_stream.get_chunk(chunkBegin, chunkBegin + chunkLength));
+            }
         }
-        else if (tell_pos() == doc.size())
+        else if (end())
             throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
         advance(); // 跳过右引号

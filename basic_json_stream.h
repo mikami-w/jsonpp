@@ -79,5 +79,29 @@ namespace JSONpp
     template<typename T>
     inline constexpr bool isJsonStream_v = isJsonStream<T>::value;
 #endif
+
+    // 流适配器
+    class StringViewStream
+    {
+        std::string_view data;
+        size_t pos;
+
+    public:
+        char peek() { return data[pos]; }
+        char advance() { return data[pos++]; }
+        size_t tell_pos() { return pos; }
+        size_t size() { return data.size(); }
+        void seek(size_t step) { pos += step; }
+        std::string_view get_chunk(size_t begin, size_t length) { return data.substr(begin, length); }
+        bool eof() { return pos >= data.size(); }
+
+        explicit StringViewStream(std::string_view doc): data(doc), pos(doc.size()) {}
+    };
+
+    class IstreamStream
+    {
+
+    };
+
 }
 #endif //JSONPP_BASIC_JSON_STREAM_H

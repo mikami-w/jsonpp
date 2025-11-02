@@ -13,6 +13,7 @@
 #include "basic_json_stream.h"
 
 #ifndef NDEBUG
+#include <cassert>
 #include <iostream>
 #include <sstream>
 using std::cerr, std::endl;
@@ -39,23 +40,23 @@ namespace JSONpp
         size_t size() const { return m_stream.size(); }
 
         template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
-        char seek(size_t step) { return m_stream.seek(step); }
+        void seek(size_t step) { m_stream.seek(step); }
 
         template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
         std::string_view get_chunk(size_t begin, size_t length) { return m_stream.get_chunk(begin, length); }
 
-        bool end() const;
+        bool eof() const;
 
         explicit ParserBase(StreamT& stream): m_stream(stream) {}
     };
 
     template <typename StreamT>
-    bool ParserBase<StreamT>::end() const
+    bool ParserBase<StreamT>::eof() const
     {
         if constexpr (isSeekableStream_v<StreamT>)
         {
 #ifndef NDEBUG
-            assert(m_stream.tell_pos() <= m_stream.size(), "WTF pos > m_stream.size()");
+            assert(m_stream.tell_pos() <= m_stream.size()); //, "WTF pos > m_stream.size()"
 #endif
             return m_stream.tell_pos() == m_stream.size();
         }
@@ -75,7 +76,7 @@ namespace JSONpp
         using ParserBase<StreamT>::peek;
         using ParserBase<StreamT>::advance;
         using ParserBase<StreamT>::tell_pos;
-        using ParserBase<StreamT>::end;
+        using ParserBase<StreamT>::eof;
         using ParserBase<StreamT>::size;
         using ParserBase<StreamT>::seek;
         using ParserBase<StreamT>::get_chunk;
@@ -121,7 +122,7 @@ namespace JSONpp
 
         // TODO: 分别为随机访问流和顺序流编写parse代码(前者分块写入, 后者逐字符)
         bool isEscaping = false;
-        while (!end() && (peek() != '\"' || (peek() == '\"' && isEscaping)))
+        while (!eof() && (peek() != '\"' || (peek() == '\"' && isEscaping)))
         {
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
             if (peek() < 0x20)
@@ -144,8 +145,8 @@ namespace JSONpp
                 case 'u':
                     { // TODO: 解析 utf-16 代理, 没做呢
                         advance();
-                        char buf[5]{};
-                        m_stream.read(buf, 4);
+                        // char buf[5]{};
+                        std::string_view buf = m_stream.get_chunk(tell_pos(), 4);
                         auto [code, err] = parse_hex4(buf);
                         if (err)
                             throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
@@ -200,7 +201,7 @@ namespace JSONpp
                 str.append(get_chunk(chunkBegin, chunkLength));
             }
         }
-        else if (end())
+        else if (eof())
             throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
         advance(); // 跳过右引号
@@ -220,7 +221,7 @@ namespace JSONpp
         using ParserBase<StreamT>::peek;
         using ParserBase<StreamT>::advance;
         using ParserBase<StreamT>::tell_pos;
-        using ParserBase<StreamT>::end;
+        using ParserBase<StreamT>::eof;
         using ParserBase<StreamT>::size;
         using ParserBase<StreamT>::seek;
         using ParserBase<StreamT>::get_chunk;
@@ -298,7 +299,7 @@ namespace JSONpp
     void Parser<StreamT>::skip_whitespace()
     {
         // TODO: 针对随机访问流进行优化
-        while (!end() && is_whitespace(peek()))
+        while (!eof() && is_whitespace(peek()))
         {
             advance();
         }
@@ -392,7 +393,7 @@ namespace JSONpp
         auto start = tell_pos(); // 跳过左 [
         advance();
         skip_whitespace();
-        while (!end() && peek() != ']')
+        while (!eof() && peek() != ']')
         {
             arr.push_back(parse_value());
             skip_whitespace();
@@ -421,7 +422,7 @@ namespace JSONpp
         auto start = tell_pos(); // 跳过左 {
         advance();
         skip_whitespace();
-        while (!end() && peek() != '}')
+        while (!eof() && peek() != '}')
         {
             auto key = parse_value();
 
@@ -458,13 +459,13 @@ namespace JSONpp
     std::optional<JSONValue> Parser<StreamT>::parse()
     {
         skip_whitespace();
-        if (end()) // doc 为空
+        if (eof()) // doc 为空
             return std::nullopt;
 
         auto val = parse_value();
         skip_whitespace();
 
-        if (end()) // 表示恰好解析整个文档
+        if (eof()) // 表示恰好解析整个文档
             return val;
         else
             throw JSONParseError("Unexpected character(s) after JSON value");
@@ -707,6 +708,7 @@ namespace JSONpp
 
     std::optional<JSONValue> parse(std::string_view json_str)
     {
-        return Parser(json_str).parse();
+        StringViewStream stream(json_str);
+        return Parser<StringViewStream>(stream).parse();
     }
 }

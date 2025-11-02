@@ -42,7 +42,7 @@ namespace JSONpp
         template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
         void seek(size_t step) { m_stream.seek(step); }
 
-        template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
+        template<typename = std::enable_if_t<isContiguousStream_v<StreamT>>>
         std::string_view get_chunk(size_t begin, size_t length) { return m_stream.get_chunk(begin, length); }
 
         bool eof() const;
@@ -90,6 +90,7 @@ namespace JSONpp
         };
 
         static hex4_result parse_hex4(std::string_view num);
+        void parse_escape_characters(std::string& str);
 
     public:
         JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream) {}
@@ -107,12 +108,62 @@ namespace JSONpp
         return {0, true};
     }
 
+    template <typename StreamT>
+    void JSONStringParser<StreamT>::parse_escape_characters(std::string& str)
+    {
+        // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
+        if (peek() < 0x20)
+            throw JSONParseError("Unescaped control character in string", tell_pos());
+
+
+        switch (peek())
+        {
+        case '\"': str.append("\""); advance(); break;
+        case '\\': str.append("\\"); advance(); break;
+            // #ifdef ESCAPE_FORWARD_SLASH
+            //                  case '/': str.append("/"); advance(); break;
+            // #endif
+        case 'b': str.append("\b"); advance(); break;
+        case 'f': str.append("\f"); advance(); break;
+        case 'n': str.append("\n"); advance(); break;
+        case 'r': str.append("\r"); advance(); break;
+        case 't': str.append("\t"); advance(); break;
+        case 'u':
+            { // TODO: 解析 utf-16 代理, 没做呢
+                advance();
+                // char buf[5]{};
+                if constexpr (isContiguousStream_v<StreamT>)
+                {
+                    std::string_view buf = m_stream.get_chunk(tell_pos(), 4);
+                    auto [code, err] = parse_hex4(buf);
+                    if (err)
+                        throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
+                    seek(4);
+                }
+                else
+                {
+                    std::string buf;
+                    buf += advance();
+                    buf += advance();
+                    buf += advance();
+                    buf += advance();
+                    auto [code, err] = parse_hex4(buf);
+                    if (err)
+                        throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
+                }
+                break;
+            }
+        default:
+            throw JSONParseError("Invalid escape character", tell_pos());
+        }
+
+    }
+
     template<typename StreamT>
     std::string JSONStringParser<StreamT>::parse()
     { // TODO: 处理转义字符
         size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
         advance();
-        size_t chunkBegin = tell_pos();
 
         std::string str;
         if constexpr (isSizedStream_v<StreamT>)
@@ -121,87 +172,11 @@ namespace JSONpp
         }
 
         // TODO: 分别为随机访问流和顺序流编写parse代码(前者分块写入, 后者逐字符)
-        bool isEscaping = false;
-        while (!eof() && (peek() != '\"' || (peek() == '\"' && isEscaping)))
+        while (!eof() && (peek() != '\"' || (peek() == '\"')))
         {
-            // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
-            if (peek() < 0x20)
-                throw JSONParseError("Unescaped control character in string", tell_pos());
-
-            if (isEscaping)
-            {
-                switch (peek())
-                {
-                case '\"': str.append("\""); advance(); break;
-                case '\\': str.append("\\"); advance(); break;
-// #ifdef ESCAPE_FORWARD_SLASH
-//                  case '/': str.append("/"); advance(); break;
-// #endif
-                case 'b': str.append("\b"); advance(); break;
-                case 'f': str.append("\f"); advance(); break;
-                case 'n': str.append("\n"); advance(); break;
-                case 'r': str.append("\r"); advance(); break;
-                case 't': str.append("\t"); advance(); break;
-                case 'u':
-                    { // TODO: 解析 utf-16 代理, 没做呢
-                        advance();
-                        // char buf[5]{};
-                        std::string_view buf = m_stream.get_chunk(tell_pos(), 4);
-                        auto [code, err] = parse_hex4(buf);
-                        if (err)
-                            throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
-                        seek(4);
-                        break;
-                    }
-                default:
-                    throw JSONParseError("Invalid escape character", tell_pos());
-                }
-
-                if constexpr (isSeekableStream_v<StreamT>)
-                { // 可随机访问流
-                    chunkBegin = tell_pos();
-                }
-                // 顺序流无需记录块起始位置, 因为是逐字节处理
-                isEscaping = false;
-                continue;
-            }
-
-            if (peek() == '\\' && !isEscaping)
-            {
-                isEscaping = true;
-                if constexpr (isSeekableStream_v<StreamT>)
-                { // 可随机访问流
-                    size_t chunkLength = tell_pos() - chunkBegin;
-                    str.append(get_chunk(chunkBegin, chunkLength));
-                }
-                // 顺序流只需跳过'\\'
-                advance();
-                continue;
-            }
-
-            if constexpr (isSeekableStream_v<StreamT>)
-            {
-                // 普通字符, 指针前进
-                advance();
-            }
-            else
-            {
-                // 顺序流, 逐字节处理
-                str.push_back(advance());
-            }
-
         }
 
-        if (peek() == '\"')
-        {
-            if constexpr (isSeekableStream_v<StreamT>)
-            {
-                // 字符串结束, 写入最后一个块
-                size_t chunkLength = tell_pos() - chunkBegin;
-                str.append(get_chunk(chunkBegin, chunkLength));
-            }
-        }
-        else if (eof())
+        if (eof())
             throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
         advance(); // 跳过右引号
@@ -362,7 +337,7 @@ namespace JSONpp
 
         size_t start = tell_pos();
 
-        if constexpr (isSeekableStream_v<StreamT>)
+        if constexpr (isContiguousStream_v<StreamT>)
         {
             while (is_num_char(peek()))
                 advance();

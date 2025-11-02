@@ -21,13 +21,14 @@ using std::cerr, std::endl;
 namespace JSONpp
 {
     /*
-     * JSONStringParser
+     * ParserBase
      */
     template<typename StreamT>
-    class JSONStringParser
+    class ParserBase
     {
         static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
 
+    public:
         StreamT& m_stream;
 
         char peek() const { return m_stream.peek(); }
@@ -45,22 +46,11 @@ namespace JSONpp
 
         bool end() const;
 
-        struct hex4_result
-        {
-            std::int16_t number = 0;
-            bool error_occurred = false;
-        };
-
-        static hex4_result parse_hex4(std::string_view num);
-
-    public:
-        JSONStringParser(StreamT& stream): m_stream(stream) {}
-        std::string parse();
-
+        explicit ParserBase(StreamT& stream): m_stream(stream) {}
     };
 
     template <typename StreamT>
-    bool JSONStringParser<StreamT>::end() const
+    bool ParserBase<StreamT>::end() const
     {
         if constexpr (isSeekableStream_v<StreamT>)
         {
@@ -74,6 +64,37 @@ namespace JSONpp
             return m_stream.eof();
         }
     }
+
+    /*
+     * JSONStringParser
+     */
+    template<typename StreamT>
+    class JSONStringParser : public ParserBase<StreamT>
+    {
+    protected:
+        using ParserBase<StreamT>::peek;
+        using ParserBase<StreamT>::advance;
+        using ParserBase<StreamT>::tell_pos;
+        using ParserBase<StreamT>::end;
+        using ParserBase<StreamT>::size;
+        using ParserBase<StreamT>::seek;
+        using ParserBase<StreamT>::get_chunk;
+        using ParserBase<StreamT>::m_stream;
+
+    private:
+        struct hex4_result
+        {
+            std::int16_t number = 0;
+            bool error_occurred = false;
+        };
+
+        static hex4_result parse_hex4(std::string_view num);
+
+    public:
+        JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream) {}
+        std::string parse();
+
+    };
 
     template<typename StreamT>
     typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::parse_hex4(std::string_view num)
@@ -192,28 +213,20 @@ namespace JSONpp
     /*
      * JSON Parser
      */
-
     template<typename StreamT>
-    class Parser
+    class Parser : public ParserBase<StreamT>
     {
-        static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
+    protected:
+        using ParserBase<StreamT>::peek;
+        using ParserBase<StreamT>::advance;
+        using ParserBase<StreamT>::tell_pos;
+        using ParserBase<StreamT>::end;
+        using ParserBase<StreamT>::size;
+        using ParserBase<StreamT>::seek;
+        using ParserBase<StreamT>::get_chunk;
+        using ParserBase<StreamT>::m_stream;
 
-        StreamT& m_stream;
-
-        char peek() const { return m_stream.peek(); }
-        char advance() { return m_stream.advance(); }
-        size_t tell_pos() const { return m_stream.tell_pos(); }
-
-        template<std::enable_if_t<isSizedStream_v<StreamT>, int> = 0>
-        size_t size() const { return m_stream.size(); }
-
-        template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
-        char seek(size_t step) { return m_stream.seek(step); }
-
-        template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
-        std::string_view get_chunk(size_t begin, size_t length) { return m_stream.get_chunk(begin, length); }
-
-        bool end() const;
+    private:
 
         static bool is_whitespace(char ch);
 
@@ -236,26 +249,10 @@ namespace JSONpp
     public:
         Parser() = delete;
 
-        explicit Parser(StreamT& stream) : m_stream(stream) {}
+        explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream) {}
 
         std::optional<JSONValue> parse();
     };
-
-    template <typename StreamT>
-    bool Parser<StreamT>::end() const
-    {
-        if constexpr (isSeekableStream_v<StreamT>)
-        {
-#ifndef NDEBUG
-            assert(m_stream.tell_pos() <= m_stream.size(), "WTF pos > m_stream.size()");
-#endif
-            return m_stream.tell_pos() == m_stream.size();
-        }
-        else
-        { // TODO: 这玩意怎么写?
-            return m_stream.eof();
-        }
-    }
 
     template <typename StreamT>
     void Parser<StreamT>::parse_literal(char const* lit, size_t len)
@@ -294,18 +291,17 @@ namespace JSONpp
     template<typename StreamT>
     bool Parser<StreamT>::is_whitespace(char ch)
     {
-        return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
+        return std::string_view(" \n\r\t").find(ch) != std::string_view::npos;
     }
 
     template<typename StreamT>
     void Parser<StreamT>::skip_whitespace()
-    { // TODO: 能否使用 std::find_if 优化?
-        if (end())
-            return; // 到达文档尽头
-
-        if (!is_whitespace(peek()))
-            return;
-        while (is_whitespace((advance(), peek())));
+    {
+        // TODO: 针对随机访问流进行优化
+        while (!end() && is_whitespace(peek()))
+        {
+            advance();
+        }
     }
 
     template<typename StreamT>

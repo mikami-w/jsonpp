@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <string_view>
 
 namespace JSONpp
 {
@@ -87,10 +88,10 @@ namespace JSONpp
         size_t pos;
 
     public:
-        char peek() { return data[pos]; }
+        char peek() const { return data[pos]; }
         char advance() { return data[pos++]; }
-        size_t tell_pos() { return pos; }
-        size_t size() { return data.size(); }
+        size_t tell_pos() const { return pos; }
+        size_t size() const { return data.size(); }
         void seek(size_t step) { pos += step; }
         std::string_view get_chunk(size_t begin, size_t length) { return data.substr(begin, length); }
         bool eof() { return pos >= data.size(); }

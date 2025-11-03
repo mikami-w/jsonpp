@@ -84,7 +84,7 @@ namespace JSONpp
         std::enable_if_t<isSeekableStream_v<T>,
         std::void_t<
             decltype(std::declval<T>().get_chunk(size_t(), size_t())),
-            decltype(std::declval<T>().get_chunk_until(std::declval<_details::PredicateFunctor>()))
+            decltype(std::declval<T&>().read_chunk_until(std::declval<_details::PredicateFunctor>()))
     >>>
         : std::true_type {};
 
@@ -116,17 +116,17 @@ namespace JSONpp
         size_t tell_pos() const { return pos; }
         size_t size() const { return data.size(); }
         void seek(size_t step) { pos += step; }
-        std::string_view get_chunk(size_t begin, size_t length) { return data.substr(begin, length); }
+        std::string_view get_chunk(size_t begin, size_t length) const { return data.substr(begin, length); }
         bool eof() { return pos >= data.size(); }
 
         template<typename FunctorT>
-        std::string_view get_chunk_until(FunctorT predicate) &;
+        std::string_view read_chunk_until(FunctorT predicate) &;
 
         explicit StringViewStream(std::string_view doc): data(doc), pos(0) {}
     };
 
     template<typename FunctorT>
-    std::string_view StringViewStream::get_chunk_until(FunctorT predicate) &
+    std::string_view StringViewStream::read_chunk_until(FunctorT predicate) &
     {
         std::string_view remaining = data.substr(pos);
         auto it = std::find_if(remaining.begin(), remaining.end(), predicate);

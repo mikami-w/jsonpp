@@ -19,6 +19,18 @@
 using std::cerr, std::endl;
 #endif
 
+#define JSONPP_IMPORT_PARSERBASE_MEMBERS_ \
+using ParserBase<StreamT>::m_stream;        \
+using ParserBase<StreamT>::peek;            \
+using ParserBase<StreamT>::advance;         \
+using ParserBase<StreamT>::tell_pos;        \
+using ParserBase<StreamT>::eof;             \
+using ParserBase<StreamT>::size;            \
+using ParserBase<StreamT>::seek;            \
+using ParserBase<StreamT>::get_chunk;       \
+using ParserBase<StreamT>::read_chunk_until;
+
+
 namespace JSONpp
 {
     /*
@@ -36,14 +48,18 @@ namespace JSONpp
         char advance() { return m_stream.advance(); }
         size_t tell_pos() const { return m_stream.tell_pos(); }
 
-        template<std::enable_if_t<isSizedStream_v<StreamT>, int> = 0>
-        size_t size() const { return m_stream.size(); }
+        size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
+            else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
 
-        template<std::enable_if_t<isSeekableStream_v<StreamT>, int> = 0>
-        void seek(size_t step) { m_stream.seek(step); }
+        void seek(size_t step) { if constexpr (isSeekableStream_v<StreamT>) { m_stream.seek(step); }
+            else { static_assert(false, ".seek() was called, but the stream is not a Seekable Stream."); } }
 
-        template<typename = std::enable_if_t<isContiguousStream_v<StreamT>>>
-        std::string_view get_chunk(size_t begin, size_t length) { return m_stream.get_chunk(begin, length); }
+        std::string_view get_chunk(size_t begin, size_t length) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.get_chunk(begin, length); }
+            else { static_assert(false, ".get_chunk() was called, but the stream is not a Contiguous Stream."); } }
+
+        template<typename FunctorT>
+        std::string_view read_chunk_until(FunctorT predicate) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.read_chunk_until(predicate); }
+            else { static_assert(false, ".get_chunk_until() was called, but the stream is not a Contiguous Stream."); } }
 
         bool eof() const;
 
@@ -73,14 +89,7 @@ namespace JSONpp
     class JSONStringParser : public ParserBase<StreamT>
     {
     protected:
-        using ParserBase<StreamT>::peek;
-        using ParserBase<StreamT>::advance;
-        using ParserBase<StreamT>::tell_pos;
-        using ParserBase<StreamT>::eof;
-        using ParserBase<StreamT>::size;
-        using ParserBase<StreamT>::seek;
-        using ParserBase<StreamT>::get_chunk;
-        using ParserBase<StreamT>::m_stream;
+        JSONPP_IMPORT_PARSERBASE_MEMBERS_
 
     private:
         struct hex4_result
@@ -90,7 +99,7 @@ namespace JSONpp
         };
 
         static hex4_result parse_hex4(std::string_view num);
-        void parse_escape_characters(std::string& str);
+        void parse_escape_characters(std::string& buf);
 
     public:
         JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream) {}
@@ -109,25 +118,20 @@ namespace JSONpp
     }
 
     template <typename StreamT>
-    void JSONStringParser<StreamT>::parse_escape_characters(std::string& str)
+    void JSONStringParser<StreamT>::parse_escape_characters(std::string& buf)
     {
-        // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
-        if (peek() < 0x20)
-            throw JSONParseError("Unescaped control character in string", tell_pos());
-
-
         switch (peek())
         {
-        case '\"': str.append("\""); advance(); break;
-        case '\\': str.append("\\"); advance(); break;
-            // #ifdef ESCAPE_FORWARD_SLASH
-            //                  case '/': str.append("/"); advance(); break;
-            // #endif
-        case 'b': str.append("\b"); advance(); break;
-        case 'f': str.append("\f"); advance(); break;
-        case 'n': str.append("\n"); advance(); break;
-        case 'r': str.append("\r"); advance(); break;
-        case 't': str.append("\t"); advance(); break;
+        case '\"': buf.append("\""); advance(); break;
+        case '\\': buf.append("\\"); advance(); break;
+// #ifdef ESCAPE_FORWARD_SLASH
+//                  case '/': str.append("/"); advance(); break;
+// #endif
+        case 'b': buf.append("\b"); advance(); break;
+        case 'f': buf.append("\f"); advance(); break;
+        case 'n': buf.append("\n"); advance(); break;
+        case 'r': buf.append("\r"); advance(); break;
+        case 't': buf.append("\t"); advance(); break;
         case 'u':
             { // TODO: 解析 utf-16 代理, 没做呢
                 advance();
@@ -172,8 +176,41 @@ namespace JSONpp
         }
 
         // TODO: 分别为随机访问流和顺序流编写parse代码(前者分块写入, 后者逐字符)
-        while (!eof() && (peek() != '\"' || (peek() == '\"')))
+        while (!eof())
         {
+            if constexpr (isContiguousStream_v<StreamT>)
+            {
+                std::string_view chunk = read_chunk_until([](char c)
+                { // 需要终止搜索的字符
+                    return c == '\\' || c == '\"' || static_cast<unsigned char>(c) < 0x20
+#ifdef ESCAPE_FORWARD_SLASH
+                        || c == '/'
+#endif
+                    ;
+                });
+
+                if (!chunk.empty())
+                    str.append(chunk);
+                // 下面检查为什么停下
+            }
+
+            auto ch = peek();
+            if (ch == '\"')
+                break;
+
+            if (ch == '\\')
+            {
+                advance();
+                parse_escape_characters(str);
+            }
+            // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
+            else if (ch < 0x20)
+                throw JSONParseError("Unescaped control character in string", tell_pos());
+            else
+            {
+                // 只有 IStreamStream 会在这里命中好字符, StringViewStream 已经在 chunk 中处理了它们
+                str += ch;
+            }
         }
 
         if (eof())
@@ -193,14 +230,7 @@ namespace JSONpp
     class Parser : public ParserBase<StreamT>
     {
     protected:
-        using ParserBase<StreamT>::peek;
-        using ParserBase<StreamT>::advance;
-        using ParserBase<StreamT>::tell_pos;
-        using ParserBase<StreamT>::eof;
-        using ParserBase<StreamT>::size;
-        using ParserBase<StreamT>::seek;
-        using ParserBase<StreamT>::get_chunk;
-        using ParserBase<StreamT>::m_stream;
+        JSONPP_IMPORT_PARSERBASE_MEMBERS_
 
     private:
 

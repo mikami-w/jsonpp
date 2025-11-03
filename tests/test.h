@@ -53,7 +53,16 @@ namespace Test
         {
             try
             {
-                JSONpp::parse(readFileToString(file.path().string()));
+                auto j = JSONpp::parse(readFileToString(file.path().string()));
+                if (!j.has_value())
+                {
+                    std::cerr << "Error occurred in file " << file.path().filename() << std::endl;
+                    std::cerr << "Empty Document." << std::endl;
+                }
+                else
+                {
+                    std::cerr << "Parsed JSON: " << j.value() << std::endl;
+                }
 
             } catch (std::exception& e)
             {

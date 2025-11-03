@@ -61,7 +61,8 @@ namespace Test
                 }
                 else
                 {
-                    std::cerr << "Parsed JSON: " << j.value() << std::endl;
+                    std::cerr << "File contents:\t" << readFileToString(file.path().string());
+                    std::cerr << "Parsed JSON:\t" << j.value() << std::endl;
                 }
 
             } catch (std::exception& e)
@@ -92,8 +93,8 @@ namespace Test
 
             } catch (std::exception& e)
             {
-                std::cerr << "Error occurred in file " << file.path().filename() << std::endl;
-                // std::cerr << e.what() << std::endl;
+                std::cerr << "Error occurred in file " << file.path().filename();
+                std::cerr << ": " << e.what() << std::endl;
                 ++errors;
             }
         }

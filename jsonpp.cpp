@@ -99,7 +99,7 @@ namespace JSONpp
         };
 
         static hex4_result parse_hex4(std::string_view num);
-        void parse_escape_characters(std::string& buf);
+        void unescape_character(std::string& buf);
 
     public:
         JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream) {}
@@ -118,40 +118,38 @@ namespace JSONpp
     }
 
     template <typename StreamT>
-    void JSONStringParser<StreamT>::parse_escape_characters(std::string& buf)
+    void JSONStringParser<StreamT>::unescape_character(std::string& buf)
     {
         switch (peek())
         {
-        case '\"': buf.append("\""); advance(); break;
-        case '\\': buf.append("\\"); advance(); break;
-// #ifdef ESCAPE_FORWARD_SLASH
-//                  case '/': str.append("/"); advance(); break;
-// #endif
-        case 'b': buf.append("\b"); advance(); break;
-        case 'f': buf.append("\f"); advance(); break;
-        case 'n': buf.append("\n"); advance(); break;
-        case 'r': buf.append("\r"); advance(); break;
-        case 't': buf.append("\t"); advance(); break;
+        case '\"': buf += '\"'; advance(); break;
+        case '\\': buf += '\\'; advance(); break;
+        case '/': buf += '/'; advance(); break;
+        case 'b': buf += '\b'; advance(); break;
+        case 'f': buf += '\f'; advance(); break;
+        case 'n': buf += '\n'; advance(); break;
+        case 'r': buf += '\r'; advance(); break;
+        case 't': buf += '\t'; advance(); break;
         case 'u':
             { // TODO: 解析 utf-16 代理, 没做呢
                 advance();
                 // char buf[5]{};
                 if constexpr (isContiguousStream_v<StreamT>)
                 {
-                    std::string_view buf = m_stream.get_chunk(tell_pos(), 4);
-                    auto [code, err] = parse_hex4(buf);
+                    std::string_view num_buf = m_stream.get_chunk(tell_pos(), 4);
+                    auto [code, err] = parse_hex4(num_buf);
                     if (err)
                         throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
                     seek(4);
                 }
                 else
                 {
-                    std::string buf;
-                    buf += advance();
-                    buf += advance();
-                    buf += advance();
-                    buf += advance();
-                    auto [code, err] = parse_hex4(buf);
+                    std::string num_buf;
+                    num_buf += advance();
+                    num_buf += advance();
+                    num_buf += advance();
+                    num_buf += advance();
+                    auto [code, err] = parse_hex4(num_buf);
                     if (err)
                         throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
                 }
@@ -201,7 +199,7 @@ namespace JSONpp
             if (ch == '\\')
             {
                 advance();
-                parse_escape_characters(str);
+                unescape_character(str);
             }
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
             else if (ch < 0x20)

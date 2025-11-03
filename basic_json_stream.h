@@ -122,7 +122,7 @@ namespace JSONpp
         template<typename FunctorT>
         std::string_view get_chunk_until(FunctorT predicate) &;
 
-        explicit StringViewStream(std::string_view doc): data(doc), pos(doc.size()) {}
+        explicit StringViewStream(std::string_view doc): data(doc), pos(0) {}
     };
 
     template<typename FunctorT>

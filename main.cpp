@@ -3,14 +3,15 @@
 #include <string>
 #include "jsonpp.h"
 #include "tests/test.h"
-#include "print.h"
-#include "print_ref.h"
+// #include "print.h"
+// #include "print_ref.h"
 
 int main()
 {
     Test::test_usability();
     std::cerr << std::endl;
     Test::test_error_handling();
+    std::cerr << std::endl;
 
     return 0;
 }

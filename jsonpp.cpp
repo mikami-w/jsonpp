@@ -180,11 +180,7 @@ namespace JSONpp
             {
                 std::string_view chunk = read_chunk_until([](char c)
                 { // 需要终止搜索的字符
-                    return c == '\\' || c == '\"' || static_cast<unsigned char>(c) < 0x20
-#ifdef ESCAPE_FORWARD_SLASH
-                        || c == '/'
-#endif
-                    ;
+                    return c == '\\' || c == '\"' || static_cast<unsigned char>(c) < 0x20;
                 });
 
                 if (!chunk.empty())

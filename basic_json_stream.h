@@ -20,21 +20,24 @@ namespace JSONpp
         // 有效偏特化
         template<typename T>
         struct isJsonStreamImpl<T, std::void_t<
-                                    decltype(std::declval<T>().peek()),
-                                    decltype(std::declval<T>().advance()),
-                                    decltype(std::declval<T>().tell_pos())
-                                >>
+            decltype(std::declval<T>().peek()),
+            decltype(std::declval<T>().advance()),
+            decltype(std::declval<T>().tell_pos()),
+            decltype(std::declval<T>().eof())
+        >>
         {
         private:
             using peek_return_t = decltype(std::declval<T>().peek());
             using advance_return_t = decltype(std::declval<T>().advance());
-            using get_pos_return_t = decltype(std::declval<T>().tell_pos());
+            using tell_pos_return_t = decltype(std::declval<T>().tell_pos());
+            using eof_return_t = decltype(std::declval<T>().eof());
 
         public:
             static constexpr bool value = std::conjunction_v<
                 std::is_same<peek_return_t, char>,
                 std::is_same<advance_return_t, char>,
-                std::is_same<get_pos_return_t, size_t>
+                std::is_same<tell_pos_return_t, size_t>,
+                std::is_same<eof_return_t, bool>
             >;
         };
 

@@ -47,6 +47,7 @@ namespace JSONpp
         char peek() const { return m_stream.peek(); }
         char advance() { return m_stream.advance(); }
         size_t tell_pos() const { return m_stream.tell_pos(); }
+        bool eof() const { return m_stream.eof(); }
 
         size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
             else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
@@ -61,26 +62,8 @@ namespace JSONpp
         std::string_view read_chunk_until(FunctorT predicate) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.read_chunk_until(predicate); }
             else { static_assert(false, ".get_chunk_until() was called, but the stream is not a Contiguous Stream."); } }
 
-        bool eof() const;
-
         explicit ParserBase(StreamT& stream): m_stream(stream) {}
     };
-
-    template <typename StreamT>
-    bool ParserBase<StreamT>::eof() const
-    {
-        if constexpr (isSeekableStream_v<StreamT>)
-        {
-#ifndef NDEBUG
-            assert(m_stream.tell_pos() <= m_stream.size()); //, "WTF pos > m_stream.size()"
-#endif
-            return m_stream.tell_pos() == m_stream.size();
-        }
-        else
-        { // TODO: 这玩意怎么写?
-            return m_stream.eof();
-        }
-    }
 
     /*
      * JSONStringParser

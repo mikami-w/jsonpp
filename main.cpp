@@ -9,12 +9,12 @@
 
 int main()
 {
-    std::cerr << JSONpp::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
+    std::cout << "JSONpp::isContiguousStream_v<JSONpp::StringViewStream>: " << JSONpp::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
 
     Test::test_usability();
-    std::cerr << std::endl;
+    std::cout << std::endl;
     Test::test_error_handling();
-    std::cerr << std::endl;
+    std::cout << std::endl;
 
     return 0;
 }

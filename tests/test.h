@@ -47,7 +47,7 @@ namespace Test
 
     inline void test_usability()
     {
-        std::cerr << "========== USABILITY TEST ==========" << std::endl;
+        std::cout << "========== USABILITY TEST ==========" << std::endl;
         for (auto const& file
             : fs::directory_iterator(testFilePath_usability))
         {
@@ -56,27 +56,27 @@ namespace Test
                 auto j = JSONpp::parse(readFileToString(file.path().string()));
                 if (!j.has_value())
                 {
-                    std::cerr << "Error occurred in file " << file.path().filename() << std::endl;
-                    std::cerr << "Empty Document." << std::endl;
+                    std::cout << "Error occurred in file " << file.path().filename() << std::endl;
+                    std::cout << "Empty Document." << std::endl;
                 }
                 else
                 {
-                    std::cerr << "File contents:\t" << readFileToString(file.path().string());
-                    std::cerr << "Parsed JSON:\t" << j.value() << std::endl;
+                    std::cout << "File contents:\t" << readFileToString(file.path().string());
+                    std::cout << "Parsed JSON:\t" << j.value() << std::endl;
                 }
 
             } catch (std::exception& e)
             {
-                std::cerr << "Error occurred in file " << file.path().filename() << std::endl;
-                std::cerr << e.what() << std::endl;
+                std::cout << "Error occurred in file " << file.path().filename() << std::endl;
+                std::cout << e.what() << std::endl;
             }
         }
-        std::cerr << "========== USABILITY TEST END ==========" << std::endl;
+        std::cout << "========== USABILITY TEST END ==========" << std::endl;
     }
 
     inline void test_error_handling()
     {
-        std::cerr << "========== ERROR HANDLING TEST ==========" << std::endl;
+        std::cout << "========== ERROR HANDLING TEST ==========" << std::endl;
         int errors = 0;
         for (auto const& file
             : fs::directory_iterator(testFilePath_errorHandling))
@@ -86,20 +86,20 @@ namespace Test
                 auto j = JSONpp::parse(readFileToString(file.path().string()));
                 if (!j.has_value())
                 {
-                    std::cerr << "Error occurred in file " << file.path().filename() << std::endl;
-                    std::cerr << "Empty Document." << std::endl;
+                    std::cout << "Error occurred in file " << file.path().filename() << std::endl;
+                    std::cout << "Empty Document." << std::endl;
                     ++errors;
                 }
 
             } catch (std::exception& e)
             {
-                std::cerr << "Error occurred in file " << file.path().filename();
-                std::cerr << ": " << e.what() << std::endl;
+                std::cout << "Error occurred in file " << file.path().filename();
+                std::cout << ": " << e.what() << std::endl;
                 ++errors;
             }
         }
-        std::cerr << std::endl << errors << " errors was found." << std::endl;
-        std::cerr << "========== ERROR HANDLING TEST END ==========" << std::endl;
+        std::cout << std::endl << errors << " errors was found." << std::endl;
+        std::cout << "========== ERROR HANDLING TEST END ==========" << std::endl;
     }
 };
 

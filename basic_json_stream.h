@@ -69,7 +69,8 @@ namespace JSONpp
     struct isSeekableStream: std::false_type {};
 
     template<typename T>
-    struct isSeekableStream<T, std::enable_if_t<isSizedStream_v<T>,
+    struct isSeekableStream<T,
+        std::enable_if_t<isSizedStream_v<T>,
         std::void_t<
             decltype(std::declval<T>().seek(size_t()))
     >>>

@@ -217,24 +217,24 @@ namespace JSONpp
 
         void parse_literal(char const* lit, size_t len);
 
-        static JSONValue parse_number_from_chunk(std::string_view chunk, size_t start);
+        static json parse_number_from_chunk(std::string_view chunk, size_t start);
 
-        JSONValue parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 JSONValue, 使 pos 指向被解析的 JSONValue 后的第一个字节
+        json parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 json, 使 pos 指向被解析的 json 后的第一个字节
 
-        JSONValue parse_null();
-        JSONValue parse_true();
-        JSONValue parse_false();
-        JSONValue parse_number();
-        JSONValue parse_string();
-        JSONValue parse_array();
-        JSONValue parse_object();
+        json parse_null();
+        json parse_true();
+        json parse_false();
+        json parse_number();
+        json parse_string();
+        json parse_array();
+        json parse_object();
 
     public:
         Parser() = delete;
 
         explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream) {}
 
-        JSONValue parse();
+        json parse();
     };
 
     template <typename StreamT>
@@ -248,7 +248,7 @@ namespace JSONpp
     }
 
     template <typename StreamT>
-    JSONValue Parser<StreamT>::parse_number_from_chunk(std::string_view chunk, size_t start)
+    json Parser<StreamT>::parse_number_from_chunk(std::string_view chunk, size_t start)
     {
         std::int64_t val_i{};
         auto res_i = std::from_chars(chunk.data(), chunk.data() + chunk.size(), val_i);
@@ -288,7 +288,7 @@ namespace JSONpp
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_value()
+    json Parser<StreamT>::parse_value()
     {
         // 调用该函数之前与之后均调用了 skip_whitespace()
         char ch = peek();
@@ -314,28 +314,28 @@ namespace JSONpp
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_null()
+    json Parser<StreamT>::parse_null()
     {
         parse_literal("null", 4);
-        return {JNull()};
+        return {null()};
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_true()
+    json Parser<StreamT>::parse_true()
     {
         parse_literal("true", 4);
-        return JSONValue(true);
+        return json(true);
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_false()
+    json Parser<StreamT>::parse_false()
     {
         parse_literal("false", 5);
-        return JSONValue(false);
+        return json(false);
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_number()
+    json Parser<StreamT>::parse_number()
     {
         auto is_num_char = [](char c) -> bool {
             return isdigit(static_cast<unsigned char>(c))
@@ -363,15 +363,15 @@ namespace JSONpp
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_string()
+    json Parser<StreamT>::parse_string()
     {
         return JSONStringParser<StreamT>(m_stream).parse();
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_array()
+    json Parser<StreamT>::parse_array()
     {
-        JArray arr;
+        array arr;
         auto start = tell_pos(); // 跳过左 [
         advance();
         skip_whitespace();
@@ -398,9 +398,9 @@ namespace JSONpp
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse_object()
+    json Parser<StreamT>::parse_object()
     {
-        JObject obj;
+        object obj;
         auto start = tell_pos(); // 跳过左 {
         advance();
         skip_whitespace();
@@ -438,7 +438,7 @@ namespace JSONpp
     }
 
     template<typename StreamT>
-    JSONValue Parser<StreamT>::parse()
+    json Parser<StreamT>::parse()
     {
         skip_whitespace();
         if (eof()) // doc 为空
@@ -462,20 +462,20 @@ namespace JSONpp
     /*
      * asserted accessor
      */
-    using _Json_Tp = std::variant
+    using JsonType = std::variant
     <
         std::monostate,
-        JNull,
+        null,
         bool,
         std::int64_t,
         double,
         std::string,
-        JArray,
-        JObject
+        array,
+        object
     >;
 
     template <typename T>
-    static T& as_impl(_Json_Tp& v, char const* typeName)
+    static T& as_impl(JsonType& v, char const* typeName)
     {
         try
         {
@@ -488,7 +488,7 @@ namespace JSONpp
     }
 
     template <typename T>
-    static T const& as_impl(_Json_Tp const& v, char const* typeName)
+    static T const& as_impl(JsonType const& v, char const* typeName)
     {
         try
         {
@@ -500,64 +500,64 @@ namespace JSONpp
         }
     }
 
-    bool JSONValue::as_bool() const
+    bool json::as_bool() const
     {
         return as_impl<bool>(value, "bool");
     }
 
-    std::int64_t JSONValue::as_int64() const
+    std::int64_t json::as_int() const
     {
         return as_impl<std::int64_t>(value, "int64");
     }
 
-    double JSONValue::as_double() const
+    double json::as_float() const
     {
         return as_impl<double>(value, "double");
     }
 
-    std::string const& JSONValue::as_string() const
+    std::string const& json::as_string() const
     {
         return as_impl<std::string>(value, "string");
     }
 
-    JArray const& JSONValue::as_array() const
+    array const& json::as_array() const
     {
-        return as_impl<JArray>(value, "array");
+        return as_impl<array>(value, "array");
     }
 
-    JObject const& JSONValue::as_object() const
+    object const& json::as_object() const
     {
-        return as_impl<JObject>(value, "object");
+        return as_impl<object>(value, "object");
     }
 
-    bool& JSONValue::as_bool()
+    bool& json::as_bool()
     {
         return as_impl<bool>(value, "bool");
     }
 
-    std::int64_t& JSONValue::as_int64()
+    std::int64_t& json::as_int()
     {
         return as_impl<std::int64_t>(value, "int64");
     }
 
-    double& JSONValue::as_double()
+    double& json::as_float()
     {
         return as_impl<double>(value, "double");
     }
 
-    std::string& JSONValue::as_string()
+    std::string& json::as_string()
     {
         return as_impl<std::string>(value, "string");
     }
 
-    JArray& JSONValue::as_array()
+    array& json::as_array()
     {
-        return as_impl<JArray>(value, "array");
+        return as_impl<array>(value, "array");
     }
 
-    JObject& JSONValue::as_object()
+    object& json::as_object()
     {
-        return as_impl<JObject>(value, "object");
+        return as_impl<object>(value, "object");
     }
     /*
      * end asserted accessor
@@ -627,15 +627,15 @@ namespace JSONpp
         return os << '\"';
     }
 
-    std::ostream& operator<<(std::ostream& os, JSONValue const& val)
+    std::ostream& operator<<(std::ostream& os, json const& val)
     {
         return std::visit(
             [&os](auto&& v) -> std::ostream&
             {
                 using T = std::decay_t<decltype(v)>;
                 if constexpr (std::is_same_v<T, std::monostate>)
-                    return os; // empty JSONValue
-                if constexpr (std::is_same_v<T, JNull> || std::is_same_v<T, std::nullptr_t>)
+                    return os; // empty json
+                if constexpr (std::is_same_v<T, null> || std::is_same_v<T, std::nullptr_t>)
                     return os << "null";
                 if constexpr (std::is_same_v<T, bool>)
                     return os << (v ? "true" : "false");
@@ -645,7 +645,7 @@ namespace JSONpp
                 {
                     return escape_string(os, v);
                 }
-                if constexpr (std::is_same_v<T, JArray>)
+                if constexpr (std::is_same_v<T, array>)
                 {
                     bool first = true;
                     os << '[';
@@ -660,7 +660,7 @@ namespace JSONpp
                     }
                     return os << ']';
                 }
-                if constexpr (std::is_same_v<T, JObject>)
+                if constexpr (std::is_same_v<T, object>)
                 {
                     bool first = true;
                     os << '{';
@@ -669,9 +669,9 @@ namespace JSONpp
                         if (first)
                         {
                             first = false;
-                            os << JSONValue(item.first) << ':' << item.second;
+                            os << json(item.first) << ':' << item.second;
                         }
-                        else os << ',' << JSONValue(item.first) << ':' << item.second;
+                        else os << ',' << json(item.first) << ':' << item.second;
                     }
                     return os << '}';
                 }
@@ -683,7 +683,7 @@ namespace JSONpp
      * end stringifier
      */
 
-    std::string JSONValue::stringify() const
+    std::string json::stringify() const
     {
         std::stringstream ss;
         ss << *this;
@@ -691,7 +691,7 @@ namespace JSONpp
         return ss.str();
     }
 
-    JSONValue parse(std::string_view json_str)
+    json parse(std::string_view json_str)
     {
         StringViewStream stream(json_str);
         return Parser<StringViewStream>(stream).parse();

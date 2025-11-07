@@ -13,11 +13,9 @@ namespace JSONpp
 {
     namespace _details
     {
-        // 默认无效
         template<typename T, typename = void>
         struct isJsonStreamImpl: std::false_type {};
 
-        // 有效偏特化
         template<typename T>
         struct isJsonStreamImpl<T, std::void_t<
             decltype(std::declval<T>().peek()),
@@ -94,19 +92,6 @@ namespace JSONpp
 
     template<typename T>
     inline constexpr bool isContiguousStream_v = isContiguousStream<T>::value;
-
-//     // 定义解析器需要的流
-// #if __cplusplus >= 202002L
-//     template<typename T>
-//     concept JsonStream = requires(T stream)
-//     {
-//         { stream.peek() } -> std::same_as<char>;  // 必须能 "偷看"
-//         { stream.advance() } -> std::same_as<char>; // 必须能 "前进"
-//         { stream.tell_pos() } -> std::same_as<size_t>; // 必须能报告位置
-//     };
-// #else
-
-
 
     // 流适配器
     class StringViewStream

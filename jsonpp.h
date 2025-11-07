@@ -22,19 +22,6 @@ namespace JSONpp{
     using JArray = std::vector<JSONValue>;
     using JObject = std::unordered_map<std::string, JSONValue>;
 
-
-#if __cplusplus >= 202002L
-    template<typename T>
-    concept JsonValueType =
-        std::is_same_v<T, JNull> ||
-        std::is_same_v<T, std::nullptr_t> ||
-        std::is_same_v<T, bool> ||
-        std::is_integral_v<T> ||
-        std::is_floating_point_v<T> ||
-        std::is_convertible_v<T, std::string> ||
-        std::is_same_v<T, JArray> ||
-        std::is_same_v<T, JObject>;
-#else
     template<typename T>
     inline constexpr bool isJsonValueType =
         std::is_same_v<T, JNull> ||
@@ -45,7 +32,6 @@ namespace JSONpp{
         std::is_convertible_v<T, std::string> ||
         std::is_same_v<T, JArray> ||
         std::is_same_v<T, JObject>;
-#endif
 
     class JSONValue
     {
@@ -70,16 +56,6 @@ namespace JSONpp{
         JSONValue(JNull): value(JNull()) {}
         JSONValue(std::nullptr_t): value(JNull()) {}
 
-#if __cplusplus >= 202002L
-        // 对整形的构造函数(含char, 会将char作为整形构造)
-        template <typename T_Integer>
-            requires std::is_integral_v<T_Integer>
-        JSONValue(T_Integer val): value(val) {}
-        // 对浮点数的构造函数
-        template <typename T_Float>
-            requires std::is_floating_point_v<T_Float>
-        JSONValue(T_Float val): value(val) {}
-#else
         // 对整形的构造函数(含char, 会将char作为整形构造)
         template <typename T_Integer,
             std::enable_if_t<std::is_integral_v<T_Integer>, int> = 0>
@@ -89,7 +65,6 @@ namespace JSONpp{
             std::enable_if_t<std::is_floating_point_v<T_Float>, int> = 0>
         JSONValue(T_Float val): value(val) {}
 
-#endif
 
         JSONValue(char const* val): value(val) {}
         JSONValue(std::string val): value(std::move(val)) {}
@@ -99,15 +74,9 @@ namespace JSONpp{
          * end constructors
          */
 
-#if __cplusplus >= 202002L
-        // operator =
-        template<JsonValueType T>
-        JSONValue& operator=(T val) { value = std::move(val); return *this; }
-#else
         template<typename T,
             std::enable_if_t<isJsonValueType<T>, int> = 0>
         JSONValue& operator=(T val) { value = std::move(val); return *this; }
-#endif
 
         JSONValue& operator=(std::nullptr_t) { value = JNull(); return *this; }
         JSONValue& operator=(std::initializer_list<JSONValue>);

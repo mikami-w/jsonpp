@@ -54,7 +54,7 @@ namespace Test
             try
             {
                 auto j = JSONpp::parse(readFileToString(file.path().string()));
-                if (!j.has_value())
+                if (j.empty())
                 {
                     std::cout << "Error occurred in file " << file.path().filename() << std::endl;
                     std::cout << "Empty Document." << std::endl;
@@ -62,7 +62,7 @@ namespace Test
                 else
                 {
                     std::cout << "File contents:\t" << readFileToString(file.path().string());
-                    std::cout << "Parsed JSON:\t" << j.value() << std::endl;
+                    std::cout << "Parsed JSON:\t" << j << std::endl;
                 }
 
             } catch (std::exception& e)
@@ -84,7 +84,7 @@ namespace Test
             try
             {
                 auto j = JSONpp::parse(readFileToString(file.path().string()));
-                if (!j.has_value())
+                if (j.empty())
                 {
                     std::cout << "Error occurred in file " << file.path().filename() << std::endl;
                     std::cout << "Empty Document." << std::endl;

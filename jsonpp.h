@@ -18,14 +18,14 @@
 namespace JSONpp{
     class JSONValue;
 
-    using JNull = std::monostate;
+    using JNull = std::nullptr_t;
     using JArray = std::vector<JSONValue>;
     using JObject = std::unordered_map<std::string, JSONValue>;
 
     template<typename T>
     inline constexpr bool isJsonValueType =
+        std::is_same_v<T, std::monostate> ||
         std::is_same_v<T, JNull> ||
-        std::is_same_v<T, std::nullptr_t> ||
         std::is_same_v<T, bool> ||
         std::is_integral_v<T> ||
         std::is_floating_point_v<T> ||
@@ -37,6 +37,7 @@ namespace JSONpp{
     {
         std::variant
         <
+            std::monostate, // 用于表示未初始化状态
             JNull,
             bool,
             std::int64_t,
@@ -54,7 +55,6 @@ namespace JSONpp{
 
         JSONValue() = default;
         JSONValue(JNull): value(JNull()) {}
-        JSONValue(std::nullptr_t): value(JNull()) {}
 
         // 对整形的构造函数(含char, 会将char作为整形构造)
         template <typename T_Integer,
@@ -78,13 +78,13 @@ namespace JSONpp{
             std::enable_if_t<isJsonValueType<T>, int> = 0>
         JSONValue& operator=(T val) { value = std::move(val); return *this; }
 
-        JSONValue& operator=(std::nullptr_t) { value = JNull(); return *this; }
         JSONValue& operator=(std::initializer_list<JSONValue>);
         // end operator =
 
         /*
          * type checkers
          */
+        bool empty() const { return std::holds_alternative<std::monostate>(value); }
         bool is_null() const { return std::holds_alternative<JNull>(value); }
         bool is_bool() const { return std::holds_alternative<bool>(value); }
         bool is_number() const { return std::holds_alternative<std::int64_t>(value) || std::holds_alternative<double>(value); }
@@ -158,10 +158,10 @@ namespace JSONpp{
     }; // class JSONValue
 
     /*
-     * Parse a document (string) to std::optional<JSONValue>.
-     * If the document is empty (or contains nothing but whitespace), it will return std::optional(std::nullopt)
+     * Parse a document (string) to JSONValue.
+     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
      */
-    std::optional<JSONValue> parse(std::string_view json_str);
+    JSONValue parse(std::string_view json_str);
 
 } // namespace JSONpp
 

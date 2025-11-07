@@ -234,7 +234,7 @@ namespace JSONpp
 
         explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream) {}
 
-        std::optional<JSONValue> parse();
+        JSONValue parse();
     };
 
     template <typename StreamT>
@@ -317,7 +317,7 @@ namespace JSONpp
     JSONValue Parser<StreamT>::parse_null()
     {
         parse_literal("null", 4);
-        return {};
+        return {JNull()};
     }
 
     template<typename StreamT>
@@ -438,11 +438,11 @@ namespace JSONpp
     }
 
     template<typename StreamT>
-    std::optional<JSONValue> Parser<StreamT>::parse()
+    JSONValue Parser<StreamT>::parse()
     {
         skip_whitespace();
         if (eof()) // doc 为空
-            return std::nullopt;
+            return {};
 
         auto val = parse_value();
         skip_whitespace();
@@ -452,7 +452,7 @@ namespace JSONpp
         else
             throw JSONParseError("Unexpected character(s) after JSON value");
 
-        return std::nullopt;
+        return {};
     }
 
     /*
@@ -464,6 +464,7 @@ namespace JSONpp
      */
     using _Json_Tp = std::variant
     <
+        std::monostate,
         JNull,
         bool,
         std::int64_t,
@@ -487,7 +488,7 @@ namespace JSONpp
     }
 
     template <typename T>
-    static T const& as_impl(const _Json_Tp& v, char const* typeName)
+    static T const& as_impl(_Json_Tp const& v, char const* typeName)
     {
         try
         {
@@ -632,6 +633,8 @@ namespace JSONpp
             [&os](auto&& v) -> std::ostream&
             {
                 using T = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<T, std::monostate>)
+                    return os; // empty JSONValue
                 if constexpr (std::is_same_v<T, JNull> || std::is_same_v<T, std::nullptr_t>)
                     return os << "null";
                 if constexpr (std::is_same_v<T, bool>)
@@ -688,7 +691,7 @@ namespace JSONpp
         return ss.str();
     }
 
-    std::optional<JSONValue> parse(std::string_view json_str)
+    JSONValue parse(std::string_view json_str)
     {
         StringViewStream stream(json_str);
         return Parser<StringViewStream>(stream).parse();

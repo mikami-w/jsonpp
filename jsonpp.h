@@ -51,7 +51,7 @@ namespace JSONpp{
         /*
          * constructors
          */
-        explicit json(bool val): value(val) {};
+        explicit json(bool val): value(val) {}
 
         json() = default;
         json(null): value(null()) {}

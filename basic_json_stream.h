@@ -6,6 +6,7 @@
 #define JSONPP_BASIC_JSON_STREAM_H
 
 #include <cstddef>
+#include <algorithm>
 #include <type_traits>
 #include <string_view>
 

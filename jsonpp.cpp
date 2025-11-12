@@ -30,6 +30,10 @@ using ParserBase<StreamT>::seek;            \
 using ParserBase<StreamT>::get_chunk;       \
 using ParserBase<StreamT>::read_chunk_until;
 
+#define JSONPP_CHECK_EOF_() \
+if (eof()) \
+    throw JSONParseError(JSONParseError::UNEXPECTED_EOF_MESSAGE);
+
 
 namespace JSONpp
 {
@@ -381,8 +385,7 @@ namespace JSONpp
         {
             arr.push_back(parse_value());
             skip_whitespace();
-            if (eof())
-                throw JSONParseError("Unexpected end of file while parsing array");
+            JSONPP_CHECK_EOF_()
 
             // json数组中对象以外的字符只能是空白字符或'['或']'或','
             if (peek() == ']')
@@ -392,14 +395,12 @@ namespace JSONpp
             advance(); // 跳过 ','
 
             skip_whitespace();
-            if (eof())
-                throw JSONParseError("Unexpected end of file while parsing array");
+            JSONPP_CHECK_EOF_()
 
             if (peek() == ']')
                 throw JSONParseError("Expected value after comma, but found ']' instead", tell_pos());
         }
-        if (eof())
-            throw JSONParseError("Unexpected end of file while parsing object");
+        JSONPP_CHECK_EOF_()
 
         if (advance() != ']') // 跳过右 ]
             throw JSONParseError("Cannot find the end of array, which start at position " + std::to_string(start));
@@ -422,8 +423,7 @@ namespace JSONpp
                 throw JSONTypeError("Key of an object must be string");
 
             skip_whitespace();
-            if (eof())
-                throw JSONParseError("Unexpected end of file while parsing object");
+            JSONPP_CHECK_EOF_()
 
             if (peek() != ':')
                 throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
@@ -434,8 +434,7 @@ namespace JSONpp
             obj[key.as_string()] = val;
 
             skip_whitespace();
-            if (eof())
-                throw JSONParseError("Unexpected end of file while parsing object");
+            JSONPP_CHECK_EOF_()
 
             if (peek() == '}')
                 break;
@@ -444,17 +443,15 @@ namespace JSONpp
             advance(); // skip comma
 
             skip_whitespace();
-            if (eof())
-                throw JSONParseError("Unexpected end of file while parsing object");
+            JSONPP_CHECK_EOF_()
 
             if (peek() == '}')
                 throw JSONParseError("Expected value after comma, but found '}' instead", tell_pos());
         }
-        if (eof())
-            throw JSONParseError("Unexpected end of file while parsing object");
+        JSONPP_CHECK_EOF_()
 
         if (advance() != '}')
-            throw JSONParseError("Cannot find the end of object, which start at position ", start);
+            throw JSONParseError("Cannot find the end of object, which start at position " + std::to_string(start));
 
         return {obj};
     }

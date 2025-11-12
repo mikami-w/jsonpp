@@ -15,6 +15,11 @@ namespace JSONpp
     {
     public:
         static constexpr char const* UNPARSABLE_MESSAGE = "Unparsable character(s)";
+        static constexpr char const* UNEXPECTED_EOF_MESSAGE = "Unexpected end of file while parsing JSON document";
+
+        // template<typename... Args>
+        // JSONParseError(Args... messages):
+        //     std::runtime_error((std::string(messages) + ...)) {}
 
         JSONParseError(std::string const& msg):
             std::runtime_error(msg) {}

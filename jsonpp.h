@@ -6,7 +6,6 @@
 #define JSONpp_H
 
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <variant>
 #include <vector>

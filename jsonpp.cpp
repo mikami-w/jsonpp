@@ -652,9 +652,10 @@ namespace JSONpp
             [&os](auto&& v) -> std::ostream&
             {
                 using T = std::decay_t<decltype(v)>;
+
                 if constexpr (std::is_same_v<T, std::monostate>)
                     return os; // empty json
-                if constexpr (std::is_same_v<T, null> || std::is_same_v<T, std::nullptr_t>)
+                if constexpr (std::is_same_v<T, null>)
                     return os << "null";
                 if constexpr (std::is_same_v<T, bool>)
                     return os << (v ? "true" : "false");

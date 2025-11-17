@@ -55,18 +55,18 @@ namespace JSONpp{
         json() = default;
         json(null): value(null()) {}
 
-        // 对整形的构造函数(含char, 会将char作为整形构造)
+        // Constructor for integral types (including char, which will be treated as an integer)
         template <typename T_Integer,
             std::enable_if_t<std::is_integral_v<T_Integer>, int> = 0>
         json(T_Integer val): value(val) {}
-        // 对浮点数的构造函数
+        // Constructor for floating-point types
         template <typename T_Float,
             std::enable_if_t<std::is_floating_point_v<T_Float>, int> = 0>
         json(T_Float val): value(val) {}
 
-
         json(char const* val): value(val) {}
         json(std::string val): value(std::move(val)) {}
+        explicit json(std::string_view val): value(std::string(val)) {} // Explicit to prevent expensive, implicit copies from a non-owning string_view.
         json(array val): value(std::move(val)) {}
         json(object val): value(std::move(val)) {}
         /*
@@ -77,7 +77,7 @@ namespace JSONpp{
             std::enable_if_t<isJsonValueType<T>, int> = 0>
         json& operator=(T val) { value = std::move(val); return *this; }
 
-        json& operator=(std::initializer_list<json>);
+        json& operator=(std::initializer_list<json>); // TODO: implement
         // end operator =
 
         /*
@@ -148,7 +148,7 @@ namespace JSONpp{
          * end accessors for array and object
          */
 
-        // 流自带将需要转义的字符添加 \ (实现其转义)的功能, 该过程发生在从内存到流的过程中
+        // The stream itself has the function of adding \ (escaping) to characters that need to be escaped. This process occurs from memory to the stream.
         friend std::ostream& operator<<(std::ostream& os, json const& val);
 
         std::string stringify() const;

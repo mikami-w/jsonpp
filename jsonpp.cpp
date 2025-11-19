@@ -37,6 +37,8 @@ if (eof()) \
 
 namespace JSONpp
 {
+    using namespace traits;
+
     /*
      * ParserBase
      */

@@ -1,6 +1,4 @@
-print*.*
-reference.cpp
-reference.exe
+DONOTADD/*
 main.cpp
 
 .idea

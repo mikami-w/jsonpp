@@ -15,7 +15,7 @@ namespace JSONpp::traits
         template <typename T, typename = void>
         struct isJsonStreamImpl: std::false_type {};
 
-        template<typename T>
+        template <typename T>
         struct isJsonStreamImpl<T, std::void_t<
             decltype(std::declval<T>().peek()),
             decltype(std::declval<T>().advance()),

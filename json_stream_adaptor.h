@@ -2,8 +2,8 @@
 // Created on 2025/10/31.
 //
 
-#ifndef JSONPP_BASIC_JSON_STREAM_H
-#define JSONPP_BASIC_JSON_STREAM_H
+#ifndef JSONPP_JSON_STREAM_ADAPTOR_H
+#define JSONPP_JSON_STREAM_ADAPTOR_H
 
 #include <cstddef>
 #include <algorithm>
@@ -27,13 +27,13 @@ namespace JSONpp
         std::string_view get_chunk(size_t begin, size_t length) const { return data.substr(begin, length); }
         bool eof() { return pos >= data.size(); }
 
-        template<typename FunctorT>
+        template <typename FunctorT>
         std::string_view read_chunk_until(FunctorT predicate) &;
 
         explicit StringViewStream(std::string_view doc): data(doc), pos(0) {}
     };
 
-    template<typename FunctorT>
+    template <typename FunctorT>
     std::string_view StringViewStream::read_chunk_until(FunctorT predicate) &
     {
         std::string_view remaining = data.substr(pos);
@@ -53,4 +53,4 @@ namespace JSONpp
     };
 
 }
-#endif //JSONPP_BASIC_JSON_STREAM_H
+#endif //JSONPP_JSON_STREAM_ADAPTOR_H

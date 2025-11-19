@@ -21,7 +21,7 @@ namespace JSONpp{
     using array = std::vector<json>;
     using object = std::unordered_map<std::string, json>;
 
-    template<typename T>
+    template <typename T>
     inline constexpr bool isJsonValueType =
         std::is_same_v<T, std::monostate> ||
         std::is_same_v<T, null> ||
@@ -73,7 +73,7 @@ namespace JSONpp{
          * end constructors
          */
 
-        template<typename T,
+        template <typename T,
             std::enable_if_t<isJsonValueType<T>, int> = 0>
         json& operator=(T val) { value = std::move(val); return *this; }
 

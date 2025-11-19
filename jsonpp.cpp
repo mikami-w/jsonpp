@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include "stream_traits.h"
 #include "jsonexception.h"
-#include "basic_json_stream.h"
+#include "json_stream_adaptor.h"
 
 #ifndef NDEBUG
 #include <cassert>
@@ -43,7 +43,7 @@ namespace JSONpp
     /*
      * ParserBase
      */
-    template<typename StreamT>
+    template <typename StreamT>
     class ParserBase
     {
         static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
@@ -65,7 +65,7 @@ namespace JSONpp
         std::string_view get_chunk(size_t begin, size_t length) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.get_chunk(begin, length); }
             else { static_assert(false, ".get_chunk() was called, but the stream is not a Contiguous Stream."); } }
 
-        template<typename FunctorT>
+        template <typename FunctorT>
         std::string_view read_chunk_until(FunctorT predicate) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.read_chunk_until(predicate); }
             else { static_assert(false, ".get_chunk_until() was called, but the stream is not a Contiguous Stream."); } }
 
@@ -75,7 +75,7 @@ namespace JSONpp
     /*
      * JSONStringParser
      */
-    template<typename StreamT>
+    template <typename StreamT>
     class JSONStringParser : public ParserBase<StreamT>
     {
     protected:
@@ -97,7 +97,7 @@ namespace JSONpp
 
     };
 
-    template<typename StreamT>
+    template <typename StreamT>
     typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::parse_hex4(std::string_view num)
     {
         std::int16_t result;
@@ -151,7 +151,7 @@ namespace JSONpp
 
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     std::string JSONStringParser<StreamT>::parse()
     { // TODO: 处理转义字符
         size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
@@ -210,7 +210,7 @@ namespace JSONpp
     /*
      * JSON Parser
      */
-    template<typename StreamT>
+    template <typename StreamT>
     class Parser : public ParserBase<StreamT>
     {
     protected:
@@ -278,13 +278,13 @@ namespace JSONpp
 
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     bool Parser<StreamT>::is_whitespace(char ch)
     {
         return std::string_view(" \n\r\t").find(ch) != std::string_view::npos;
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     void Parser<StreamT>::skip_whitespace()
     {
         // TODO: 针对随机访问流进行优化
@@ -294,7 +294,7 @@ namespace JSONpp
         }
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_value()
     {
         // 调用该函数之前与之后均调用了 skip_whitespace()
@@ -322,28 +322,28 @@ namespace JSONpp
         }
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_null()
     {
         parse_literal("null", 4);
         return {null()};
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_true()
     {
         parse_literal("true", 4);
         return json(true);
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_false()
     {
         parse_literal("false", 5);
         return json(false);
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_number()
     {
         auto is_num_char = [](char c) -> bool {
@@ -371,13 +371,13 @@ namespace JSONpp
 
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_string()
     {
         return JSONStringParser<StreamT>(m_stream).parse();
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_array()
     {
         array arr;
@@ -411,7 +411,7 @@ namespace JSONpp
         return {arr};
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse_object()
     {
         object obj;
@@ -459,7 +459,7 @@ namespace JSONpp
         return {obj};
     }
 
-    template<typename StreamT>
+    template <typename StreamT>
     json Parser<StreamT>::parse()
     {
         skip_whitespace();

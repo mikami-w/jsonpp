@@ -9,6 +9,7 @@
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
+#include "stream_traits.h"
 #include "jsonexception.h"
 #include "basic_json_stream.h"
 

@@ -39,12 +39,12 @@ make
 
 ### 头文件集成
 
-只需将以下文件复制到您的项目中：
-- `jsonpp.h`
-- `jsonpp.cpp`
-- `jsonexception.h`
-- `json_stream_adaptor.h`
-- `stream_traits.h`
+只需将 `src/` 文件夹中的以下文件复制到您的项目中：
+- `src/jsonpp.h`
+- `src/jsonpp.cpp`
+- `src/jsonexception.h`
+- `src/json_stream_adaptor.h`
+- `src/stream_traits.h`
 
 ## 快速开始
 
@@ -286,19 +286,20 @@ cd cmake-build-debug
 
 ```
 JSONpp/
-├── jsonpp.h                 # 主头文件
-├── jsonpp.cpp               # 实现文件
-├── jsonexception.h          # 异常定义
-├── json_stream_adaptor.h    # 流适配器工具
-├── stream_traits.h          # 流特征
-├── CMakeLists.txt           # 构建配置
-├── LICENSE                  # Apache License 2.0
+├── src/
+│   ├── jsonpp.h                 # 主头文件
+│   ├── jsonpp.cpp               # 实现文件
+│   ├── jsonexception.h          # 异常定义
+│   ├── json_stream_adaptor.h    # 流适配器工具
+│   └── stream_traits.h          # 流特征
 ├── tests/
 │   ├── test.cpp               # 测试实现
 │   ├── .generateUsabilityTestFiles.sh      # 可用性测试用例生成脚本
 │   ├── .generateErrorHandlingTestFiles.sh  # 错误处理测试用例生成脚本
 │   ├── usability/             # 可用性测试用例
 │   └── error_handling/        # 错误处理测试用例
+├── CMakeLists.txt           # 构建配置
+├── LICENSE                  # Apache License 2.0
 ├── README.md                # 英文版说明文件
 └── README.zh.md             # 当前文件
 ```

@@ -39,12 +39,12 @@ make
 
 ### Header-only Integration
 
-Simply copy the following files to your project:
-- `jsonpp.h`
-- `jsonpp.cpp`
-- `jsonexception.h`
-- `json_stream_adaptor.h`
-- `stream_traits.h`
+Simply copy the following files from the `src/` folder to your project:
+- `src/jsonpp.h`
+- `src/jsonpp.cpp`
+- `src/jsonexception.h`
+- `src/json_stream_adaptor.h`
+- `src/stream_traits.h`
 
 ## Quick Start
 
@@ -286,19 +286,20 @@ cd cmake-build-debug
 
 ```
 JSONpp/
-├── jsonpp.h                 # Main header file
-├── jsonpp.cpp               # Implementation
-├── jsonexception.h          # Exception definitions
-├── json_stream_adaptor.h    # Stream adaptor utilities
-├── stream_traits.h          # Stream traits
-├── CMakeLists.txt           # Build configuration
-├── LICENSE                  # Apache License 2.0
+├── src/
+│   ├── jsonpp.h                 # Main header file
+│   ├── jsonpp.cpp               # Implementation
+│   ├── jsonexception.h          # Exception definitions
+│   ├── json_stream_adaptor.h    # Stream adaptor utilities
+│   └── stream_traits.h          # Stream traits
 ├── tests/
 │   ├── test.cpp               # Test implementations
 │   ├── .generateUsabilityTestFiles.sh      # Usability test cases generator
 │   ├── .generateErrorHandlingTestFiles.sh  # Error handling test cases generator
 │   ├── usability/             # Usability test cases
 │   └── error_handling/        # Error handling test cases
+├── CMakeLists.txt           # Build configuration
+├── LICENSE                  # Apache License 2.0
 ├── README.md                # This file
 └── README.zh.md             # This file in Chinese
 ```

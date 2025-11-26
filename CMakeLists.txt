@@ -6,10 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(JSONpp
         tests/test.cpp
-        jsonpp.cpp
-        jsonpp.h
-        jsonexception.h
-        json_stream_adaptor.h
-        stream_traits.h
+        src/jsonpp.cpp
+        src/jsonpp.h
+        src/jsonexception.h
+        src/json_stream_adaptor.h
+        src/stream_traits.h
 )
-

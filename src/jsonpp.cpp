@@ -86,7 +86,7 @@ namespace JSONpp
     private:
         struct hex4_result
         {
-            std::int16_t number = 0;
+            std::uint16_t number = 0;
             bool error_occurred = false;
         };
 
@@ -102,7 +102,7 @@ namespace JSONpp
     template <typename StreamT>
     typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::parse_hex4(std::string_view num)
     {
-        std::int16_t result;
+        std::uint16_t result;
         auto [ptr, ec] = std::from_chars(num.data(), num.data() + 4, result, 16);
         if (ec == std::errc() && ptr == num.data() + num.size())
             return {result, false};

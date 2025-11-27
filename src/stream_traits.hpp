@@ -2,8 +2,8 @@
 // Created on 2025/11/19.
 //
 
-#ifndef JSONPP_TRAITS_H
-#define JSONPP_TRAITS_H
+#ifndef JSONPP_TRAITS_HPP
+#define JSONPP_TRAITS_HPP
 
 #include <type_traits>
 #include <cstddef>
@@ -93,4 +93,4 @@ namespace JSONpp::traits
     inline constexpr bool isContiguousStream_v = isContiguousStream<T>::value;
 }
 
-#endif //JSONPP_TRAITS_H
+#endif //JSONPP_TRAITS_HPP

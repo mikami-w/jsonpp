@@ -40,18 +40,18 @@ make
 ### 头文件集成
 
 只需将 `src/` 文件夹中的以下文件复制到您的项目中：
-- `src/jsonpp.h`
+- `src/jsonpp.hpp`
 - `src/jsonpp.cpp`
-- `src/jsonexception.h`
-- `src/json_stream_adaptor.h`
-- `src/stream_traits.h`
+- `src/jsonexception.hpp`
+- `src/json_stream_adaptor.hpp`
+- `src/stream_traits.hpp`
 
 ## 快速开始
 
 ### 解析 JSON
 
 ```cpp
-#include "jsonpp.h"
+#include "jsonpp.hpp"
 #include <iostream>
 
 int main() {
@@ -81,7 +81,7 @@ int main() {
 ### 创建 JSON
 
 ```cpp
-#include "jsonpp.h"
+#include "jsonpp.hpp"
 
 int main() {
     using namespace JSONpp;
@@ -231,11 +231,11 @@ j = object{{"k", "v"}};    // 赋值对象
 
 ## 异常处理
 
-该库使用在 `jsonexception.h` 中定义的自定义异常：
+该库使用在 `jsonexception.hpp` 中定义的自定义异常：
 
 ```cpp
-#include "jsonpp.h"
-#include "jsonexception.h"
+#include "jsonpp.hpp"
+#include "jsonexception.hpp"
 
 try {
     auto j = JSONpp::parse(R"({"invalid": json})");
@@ -256,11 +256,11 @@ try {
 该库包含用于灵活 I/O 的自定义流适配器：
 
 ```cpp
-#include "json_stream_adaptor.h"
-#include "stream_traits.h"
+#include "json_stream_adaptor.hpp"
+#include "stream_traits.hpp"
 
 // 自定义流处理
-// 有关实现自定义流的详细信息，请参见 json_stream_adaptor.h
+// 有关实现自定义流的详细信息，请参见 json_stream_adaptor.hpp
 ```
 
 ## 测试
@@ -287,11 +287,11 @@ cd cmake-build-debug
 ```
 JSONpp/
 ├── src/
-│   ├── jsonpp.h                 # 主头文件
+│   ├── jsonpp.hpp                 # 主头文件
 │   ├── jsonpp.cpp               # 实现文件
-│   ├── jsonexception.h          # 异常定义
-│   ├── json_stream_adaptor.h    # 流适配器工具
-│   └── stream_traits.h          # 流特征
+│   ├── jsonexception.hpp          # 异常定义
+│   ├── json_stream_adaptor.hpp    # 流适配器工具
+│   └── stream_traits.hpp          # 流特征
 ├── tests/
 │   ├── test.cpp               # 测试实现
 │   ├── .generateUsabilityTestFiles.sh      # 可用性测试用例生成脚本

@@ -2,8 +2,8 @@
 // Created on 2025/10/25.
 //
 
-#ifndef JSONpp_H
-#define JSONpp_H
+#ifndef JSONPP_HPP
+#define JSONPP_HPP
 
 #include <cstdint>
 #include <string>
@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <type_traits>
 
-#include "jsonpp.h"
+#include "jsonpp.hpp"
 
 namespace JSONpp{
     class json;
@@ -163,4 +163,4 @@ namespace JSONpp{
 
 } // namespace JSONpp
 
-#endif //JSONpp_H
+#endif //JSONPP_HPP

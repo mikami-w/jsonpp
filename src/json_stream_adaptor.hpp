@@ -2,8 +2,8 @@
 // Created on 2025/10/31.
 //
 
-#ifndef JSONPP_JSON_STREAM_ADAPTOR_H
-#define JSONPP_JSON_STREAM_ADAPTOR_H
+#ifndef JSONPP_JSON_STREAM_ADAPTOR_HPP
+#define JSONPP_JSON_STREAM_ADAPTOR_HPP
 
 #include <cstddef>
 #include <algorithm>
@@ -53,4 +53,4 @@ namespace JSONpp
     };
 
 }
-#endif //JSONPP_JSON_STREAM_ADAPTOR_H
+#endif //JSONPP_JSON_STREAM_ADAPTOR_HPP

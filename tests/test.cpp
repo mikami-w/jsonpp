@@ -9,7 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include "../src/jsonpp.h"
+#include "../src/jsonpp.hpp"
 
 namespace fs = std::filesystem;
 

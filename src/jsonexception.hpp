@@ -2,8 +2,8 @@
 // Created on 2025/10/26.
 //
 
-#ifndef JSONPP_JSONEXCEPTION_H
-#define JSONPP_JSONEXCEPTION_H
+#ifndef JSONPP_JSONEXCEPTION_HPP
+#define JSONPP_JSONEXCEPTION_HPP
 #include <stdexcept>
 
 namespace JSONpp
@@ -47,4 +47,4 @@ namespace JSONpp
      */
 }
 
-#endif //JSONPP_JSONEXCEPTION_H
+#endif //JSONPP_JSONEXCEPTION_HPP

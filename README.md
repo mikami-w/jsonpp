@@ -40,18 +40,18 @@ make
 ### Header-only Integration
 
 Simply copy the following files from the `src/` folder to your project:
-- `src/jsonpp.h`
+- `src/jsonpp.hpp`
 - `src/jsonpp.cpp`
-- `src/jsonexception.h`
-- `src/json_stream_adaptor.h`
-- `src/stream_traits.h`
+- `src/jsonexception.hpp`
+- `src/json_stream_adaptor.hpp`
+- `src/stream_traits.hpp`
 
 ## Quick Start
 
 ### Parsing JSON
 
 ```cpp
-#include "jsonpp.h"
+#include "jsonpp.hpp"
 #include <iostream>
 
 int main() {
@@ -81,7 +81,7 @@ int main() {
 ### Creating JSON
 
 ```cpp
-#include "jsonpp.h"
+#include "jsonpp.hpp"
 
 int main() {
     using namespace JSONpp;
@@ -231,11 +231,11 @@ j = object{{"k", "v"}};    // Assign object
 
 ## Exception Handling
 
-The library uses custom exceptions defined in `jsonexception.h`:
+The library uses custom exceptions defined in `jsonexception.hpp`:
 
 ```cpp
-#include "jsonpp.h"
-#include "jsonexception.h"
+#include "jsonpp.hpp"
+#include "jsonexception.hpp"
 
 try {
     auto j = JSONpp::parse(R"({"invalid": json})");
@@ -256,11 +256,11 @@ try {
 The library includes custom stream adaptors for flexible I/O:
 
 ```cpp
-#include "json_stream_adaptor.h"
-#include "stream_traits.h"
+#include "json_stream_adaptor.hpp"
+#include "stream_traits.hpp"
 
 // Custom stream handling
-// See json_stream_adaptor.h for details on implementing custom streams
+// See json_stream_adaptor.hpp for details on implementing custom streams
 ```
 
 ## Testing
@@ -287,11 +287,11 @@ cd cmake-build-debug
 ```
 JSONpp/
 ├── src/
-│   ├── jsonpp.h                 # Main header file
+│   ├── jsonpp.hpp                 # Main header file
 │   ├── jsonpp.cpp               # Implementation
-│   ├── jsonexception.h          # Exception definitions
-│   ├── json_stream_adaptor.h    # Stream adaptor utilities
-│   └── stream_traits.h          # Stream traits
+│   ├── jsonexception.hpp          # Exception definitions
+│   ├── json_stream_adaptor.hpp    # Stream adaptor utilities
+│   └── stream_traits.hpp          # Stream traits
 ├── tests/
 │   ├── test.cpp               # Test implementations
 │   ├── .generateUsabilityTestFiles.sh      # Usability test cases generator

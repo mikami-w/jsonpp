@@ -1,7 +1,3 @@
-//
-// Created on 2025/10/31.
-//
-
 #ifndef JSONPP_JSON_STREAM_ADAPTOR_HPP
 #define JSONPP_JSON_STREAM_ADAPTOR_HPP
 

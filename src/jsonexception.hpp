@@ -1,7 +1,3 @@
-//
-// Created on 2025/10/26.
-//
-
 #ifndef JSONPP_JSONEXCEPTION_HPP
 #define JSONPP_JSONEXCEPTION_HPP
 #include <stdexcept>

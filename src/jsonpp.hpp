@@ -1,7 +1,3 @@
-//
-// Created on 2025/10/25.
-//
-
 #ifndef JSONPP_HPP
 #define JSONPP_HPP
 

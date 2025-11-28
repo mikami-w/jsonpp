@@ -1,7 +1,3 @@
-//
-// Created on 2025/11/19.
-//
-
 #ifndef JSONPP_TRAITS_HPP
 #define JSONPP_TRAITS_HPP
 

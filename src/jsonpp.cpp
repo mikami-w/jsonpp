@@ -58,6 +58,10 @@ namespace JSONpp
         char advance() { return m_stream.advance(); }
         size_t tell_pos() const { return m_stream.tell_pos(); }
         bool eof() const { return m_stream.eof(); }
+        char peek() const noexcept { return m_stream.peek(); }
+        char advance() noexcept { return m_stream.advance(); }
+        size_t tell_pos() const noexcept { return m_stream.tell_pos(); }
+        bool eof() const noexcept { return m_stream.eof(); }
 
         size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
             else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
@@ -290,9 +294,9 @@ namespace JSONpp
 
     private:
 
-        static bool is_whitespace(char ch);
+        static bool is_whitespace(char ch) noexcept;
 
-        void skip_whitespace(); // 跳过从 pos 开始的空白字符, 使 pos 指向调用函数后的第一个非空白字符
+        void skip_whitespace() noexcept; // 跳过从 pos 开始的空白字符, 使 pos 指向调用函数后的第一个非空白字符
 
         void parse_literal(char const* lit, size_t len);
 
@@ -351,13 +355,13 @@ namespace JSONpp
     }
 
     template <typename StreamT>
-    bool Parser<StreamT>::is_whitespace(char ch)
+    bool Parser<StreamT>::is_whitespace(char ch) noexcept
     {
         return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
     }
 
     template <typename StreamT>
-    void Parser<StreamT>::skip_whitespace()
+    void Parser<StreamT>::skip_whitespace() noexcept
     {
         while (!eof() && is_whitespace(peek()))
             advance();

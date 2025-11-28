@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <algorithm>
+#include <cassert>
 #include <type_traits>
 #include <string_view>
 
@@ -19,12 +20,10 @@ namespace JSONpp
         size_t pos;
 
     public:
-        char peek() const { return data[pos]; }
-        char advance() { return data[pos++]; }
-        size_t tell_pos() const { return pos; }
-        size_t size() const { return data.size(); }
-        void seek(size_t step) { pos += step; }
-        std::string_view get_chunk(size_t begin, size_t length) const { return data.substr(begin, length); }
+        char peek() const noexcept { if (pos < data.size()) return data[pos]; else return 0; }
+        char advance() noexcept { if (pos < data.size()) return data[pos++]; else return 0; }
+        size_t tell_pos() const noexcept { return pos; }
+        size_t size() const noexcept { return data.size(); }
         bool eof() { return pos >= data.size(); }
 
         template <typename FunctorT>

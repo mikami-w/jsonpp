@@ -83,15 +83,15 @@ namespace JSONpp{
         /*
          * type checkers
          */
-        bool empty() const { return std::holds_alternative<std::monostate>(value); }
-        bool is_null() const { return std::holds_alternative<null>(value); }
-        bool is_bool() const { return std::holds_alternative<bool>(value); }
-        bool is_number() const { return std::holds_alternative<std::int64_t>(value) || std::holds_alternative<double>(value); }
-        bool is_int() const { return std::holds_alternative<std::int64_t>(value); }
-        bool is_float() const { return std::holds_alternative<double>(value); }
-        bool is_string() const { return std::holds_alternative<std::string>(value); }
-        bool is_array() const { return std::holds_alternative<array>(value); }
-        bool is_object() const { return std::holds_alternative<object>(value); }
+        bool empty() const noexcept { return std::holds_alternative<std::monostate>(value); }
+        bool is_null() const noexcept { return std::holds_alternative<null>(value); }
+        bool is_bool() const noexcept { return std::holds_alternative<bool>(value); }
+        bool is_number() const noexcept { return std::holds_alternative<std::int64_t>(value) || std::holds_alternative<double>(value); }
+        bool is_int() const noexcept { return std::holds_alternative<std::int64_t>(value); }
+        bool is_float() const noexcept { return std::holds_alternative<double>(value); }
+        bool is_string() const noexcept { return std::holds_alternative<std::string>(value); }
+        bool is_array() const noexcept { return std::holds_alternative<array>(value); }
+        bool is_object() const noexcept { return std::holds_alternative<object>(value); }
         /*
          * end type checkers
          */
@@ -99,19 +99,19 @@ namespace JSONpp{
         /*
          * safe accessors
          */
-        bool const* get_if_bool() const { return std::get_if<bool>(&value); }
-        std::int64_t const* get_if_int() const { return std::get_if<std::int64_t>(&value); }
-        double const* get_if_float() const { return std::get_if<double>(&value); }
-        std::string const* get_if_string() const { return std::get_if<std::string>(&value); }
-        array const* get_if_array() const { return std::get_if<array>(&value); }
-        object const* get_if_object() const { return std::get_if<object>(&value); }
+        bool const* get_if_bool() const noexcept { return std::get_if<bool>(&value); }
+        std::int64_t const* get_if_int() const noexcept { return std::get_if<std::int64_t>(&value); }
+        double const* get_if_float() const noexcept { return std::get_if<double>(&value); }
+        std::string const* get_if_string() const noexcept { return std::get_if<std::string>(&value); }
+        array const* get_if_array() const noexcept { return std::get_if<array>(&value); }
+        object const* get_if_object() const noexcept { return std::get_if<object>(&value); }
 
-        bool* get_if_bool() { return std::get_if<bool>(&value); }
-        std::int64_t* get_if_int() { return std::get_if<std::int64_t>(&value); }
-        double* get_if_float() { return std::get_if<double>(&value); }
-        std::string* get_if_string() { return std::get_if<std::string>(&value); }
-        array* get_if_array() { return std::get_if<array>(&value); }
-        object* get_if_object() { return std::get_if<object>(&value); }
+        bool* get_if_bool() noexcept { return std::get_if<bool>(&value); }
+        std::int64_t* get_if_int() noexcept { return std::get_if<std::int64_t>(&value); }
+        double* get_if_float() noexcept { return std::get_if<double>(&value); }
+        std::string* get_if_string() noexcept { return std::get_if<std::string>(&value); }
+        array* get_if_array() noexcept { return std::get_if<array>(&value); }
+        object* get_if_object() noexcept { return std::get_if<object>(&value); }
         /*
          * end safe accessors
          */

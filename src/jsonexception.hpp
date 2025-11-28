@@ -24,7 +24,7 @@ namespace JSONpp
         JSONParseError(std::string const& msg):
             std::runtime_error(msg) {}
 
-        JSONParseError(std::string const& msg, size_t pos):
+        JSONParseError(std::string const& msg, std::size_t pos):
             std::runtime_error(msg + " at position " + std::to_string(pos)) {}
     };
 

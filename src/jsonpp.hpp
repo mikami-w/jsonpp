@@ -139,8 +139,8 @@ namespace JSONpp{
         /*
          * accessors for array and object
          */
-        json& operator[](size_t index) { return as_array().at(index); }
-        const json& operator[](size_t index) const { return as_array().at(index); }
+        json& operator[](std::size_t index) { return as_array().at(index); }
+        const json& operator[](std::size_t index) const { return as_array().at(index); }
 
         json& operator[](std::string const& key) { return as_object().at(key); }
         const json& operator[](std::string const& key) const { return as_object().at(key); }

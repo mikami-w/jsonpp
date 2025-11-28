@@ -17,20 +17,20 @@ namespace JSONpp
     class StringViewStream
     {
         std::string_view data;
-        size_t pos;
+        std::size_t pos;
 
     public:
         char peek() const noexcept { if (pos < data.size()) return data[pos]; else return 0; }
         char advance() noexcept { if (pos < data.size()) return data[pos++]; else return 0; }
-        size_t tell_pos() const noexcept { return pos; }
-        size_t size() const noexcept { return data.size(); }
+        std::size_t tell_pos() const noexcept { return pos; }
+        std::size_t size() const noexcept { return data.size(); }
         bool eof() { return pos >= data.size(); }
-        void seek(size_t step) noexcept
+        void seek(std::size_t step) noexcept
         {
             assert(pos + step <= data.size() && "StringViewStream::seek out of bounds!");
             pos += step;
         }
-        std::string_view get_chunk(size_t begin, size_t length) const noexcept
+        std::string_view get_chunk(std::size_t begin, std::size_t length) const noexcept
         {
             assert(begin <= data.size() && "StringViewStream::get_chunk invalid begin!");
             return data.substr(begin, length);

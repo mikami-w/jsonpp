@@ -57,17 +57,17 @@ namespace JSONpp
     public:
         char peek() const noexcept { return m_stream.peek(); }
         char advance() noexcept { return m_stream.advance(); }
-        size_t tell_pos() const noexcept { return m_stream.tell_pos(); }
+        std::size_t tell_pos() const noexcept { return m_stream.tell_pos(); }
         bool eof() const noexcept { return m_stream.eof(); }
         void consume(char expected, std::exception const& e) { if (advance() == expected); else throw e; }
 
-        size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
+        std::size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
             else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
 
-        void seek(size_t step) { if constexpr (isSeekableStream_v<StreamT>) { m_stream.seek(step); }
+        void seek(std::size_t step) { if constexpr (isSeekableStream_v<StreamT>) { m_stream.seek(step); }
             else { static_assert(false, ".seek() was called, but the stream is not a Seekable Stream."); } }
 
-        std::string_view get_chunk(size_t begin, size_t length) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.get_chunk(begin, length); }
+        std::string_view get_chunk(std::size_t begin, std::size_t length) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.get_chunk(begin, length); }
             else { static_assert(false, ".get_chunk() was called, but the stream is not a Contiguous Stream."); } }
 
         template <typename FunctorT>
@@ -102,7 +102,7 @@ namespace JSONpp
             UCPStatus type = UCPStatus::SINGLE;
         };
 
-        hex4_result read_hex4(size_t upos);
+        hex4_result read_hex4(std::size_t upos);
         void append_utf8(std::uint32_t codepoint);
         static std::uint32_t get_codepoint(std::uint16_t high, std::uint16_t low);
         void unescape_character();
@@ -114,7 +114,7 @@ namespace JSONpp
     };
 
     template <typename StreamT>
-    typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::read_hex4(size_t upos)
+    typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::read_hex4(std::size_t upos)
     {
         std::uint16_t value;
         char num_buf[4];
@@ -224,7 +224,7 @@ namespace JSONpp
     template <typename StreamT>
     std::string JSONStringParser<StreamT>::parse()
     {
-        size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
+        std::size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
         advance();
 
         if constexpr (isSizedStream_v<StreamT>)
@@ -291,9 +291,9 @@ namespace JSONpp
 
         void skip_whitespace() noexcept; // 跳过从 pos 开始的空白字符, 使 pos 指向调用函数后的第一个非空白字符
 
-        void parse_literal(char const* lit, size_t len);
+        void parse_literal(char const* lit, std::size_t len);
 
-        static json parse_number_from_chunk(std::string_view chunk, size_t start);
+        static json parse_number_from_chunk(std::string_view chunk, std::size_t start);
 
         json parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 json, 使 pos 指向被解析的 json 后的第一个字节
 
@@ -314,9 +314,9 @@ namespace JSONpp
     };
 
     template <typename StreamT>
-    void Parser<StreamT>::parse_literal(char const* lit, size_t len)
+    void Parser<StreamT>::parse_literal(char const* lit, std::size_t len)
     {
-        for (size_t i = 0; i < len; ++i)
+        for (std::size_t i = 0; i < len; ++i)
         {
             if (advance() != lit[i])
                 throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos() - 1);
@@ -324,7 +324,7 @@ namespace JSONpp
     }
 
     template <typename StreamT>
-    json Parser<StreamT>::parse_number_from_chunk(std::string_view chunk, size_t start)
+    json Parser<StreamT>::parse_number_from_chunk(std::string_view chunk, std::size_t start)
     {
         std::int64_t val_i{};
         auto res_i = std::from_chars(chunk.data(), chunk.data() + chunk.size(), val_i);
@@ -417,7 +417,7 @@ namespace JSONpp
                 || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E';
         };
 
-        size_t start = tell_pos();
+        std::size_t start = tell_pos();
 
         if constexpr (isContiguousStream_v<StreamT>)
         {

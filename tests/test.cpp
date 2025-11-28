@@ -24,7 +24,7 @@ namespace Test
         std::vector<fs::directory_entry>& error_handling;
     };
 
-    bool is_hidden(fs::directory_entry const& file)
+    inline bool is_hidden(fs::directory_entry const& file)
     {
         return file.path().filename().string().front() == '.';
     }
@@ -120,16 +120,28 @@ namespace Test
         std::cout << std::endl << errors << " errors was found." << std::endl;
         std::cout << "========== ERROR HANDLING TEST END ==========" << std::endl;
     }
-};
+
+    void temp_test()
+    {
+        using namespace JSONpp;
+        // std::cout << "😀你好" << std::endl;
+        json j = parse(R"("\uD83D\uDE00")");
+        std::cout << j.as_string() << std::endl;
+    }
+}
 
 int main()
 {
     //std::cout << "JSONpp::isContiguousStream_v<JSONpp::StringViewStream>: " << JSONpp::traits::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
 
-    Test::test_usability();
+    Test::temp_test();
     std::cout << std::endl;
-    Test::test_error_handling();
-    std::cout << std::endl;
+
+    // std::cout << "========== Running tests... ==========" << std::endl;
+    // Test::test_usability();
+    // std::cout << std::endl;
+    // Test::test_error_handling();
+    // std::cout << std::endl;
 
     return 0;
 }

@@ -50,9 +50,10 @@ namespace JSONpp
     {
         static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
 
-    public:
+    protected:
         StreamT& m_stream;
 
+    public:
         char peek() const { return m_stream.peek(); }
         char advance() { return m_stream.advance(); }
         size_t tell_pos() const { return m_stream.tell_pos(); }
@@ -84,88 +85,157 @@ namespace JSONpp
         JSONPP_IMPORT_PARSERBASE_MEMBERS_
 
     private:
-        struct hex4_result
+        std::string result;
+
+        enum class UCPStatus: std::uint8_t // Unicode Code Point Status
         {
-            std::uint16_t number = 0;
-            bool error_occurred = false;
+            SINGLE,
+            HIGH,
+            LOW
         };
 
-        static hex4_result parse_hex4(std::string_view num);
-        void unescape_character(std::string& buf);
+        struct hex4_result
+        {
+            std::uint16_t value = 0;
+            UCPStatus type = UCPStatus::SINGLE;
+        };
+
+        hex4_result read_hex4(size_t upos);
+        void append_utf8(std::uint32_t codepoint);
+        static std::uint32_t get_codepoint(std::uint16_t high, std::uint16_t low);
+        void unescape_character();
 
     public:
-        JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream) {}
+        JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream), result() {}
         std::string parse();
 
     };
 
     template <typename StreamT>
-    typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::parse_hex4(std::string_view num)
+    typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::read_hex4(size_t upos)
     {
-        std::uint16_t result;
-        auto [ptr, ec] = std::from_chars(num.data(), num.data() + 4, result, 16);
-        if (ec == std::errc() && ptr == num.data() + num.size())
-            return {result, false};
-        return {0, true};
+        std::uint16_t value;
+        char num_buf[4];
+        for (int i = 0; i < 4; ++i)
+        {
+            JSONPP_CHECK_EOF_();
+            num_buf[i] = advance();
+        }
+        auto [ptr, ec] = std::from_chars(num_buf, num_buf + 4, value, 16);
+        if (ec == std::errc() && ptr == num_buf + 4)
+        {
+            UCPStatus type;
+            if (value >= 0xD800 && value <= 0xDBFF)
+                type = UCPStatus::HIGH;
+            else if (value >= 0xDC00 && value <= 0xDFFF)
+                type = UCPStatus::LOW;
+            else
+                type = UCPStatus::SINGLE;
+            return {value, type};
+        }
+        else throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", upos);
     }
 
     template <typename StreamT>
-    void JSONStringParser<StreamT>::unescape_character(std::string& buf)
+    void JSONStringParser<StreamT>::append_utf8(std::uint32_t codepoint)
+    {
+        if (codepoint <= 0x7F)
+        {
+            // ASCII, 0b0xxxxxxx
+            result += static_cast<char>(codepoint);
+        }
+        else if (codepoint <= 0x7FF)
+        {
+            // 2-byte UTF-8, 0b110xxxxx 0b10xxxxxx
+            result += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+            result += static_cast<char>(0x80 | (codepoint & 0x3F));
+        }
+        else if (codepoint <= 0xFFFF)
+        {
+            // 3-byte UTF-8, 0b1110xxxx 0b10xxxxxx 0b10xxxxxx
+            result += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+            result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+            result += static_cast<char>(0x80 | (codepoint & 0x3F));
+        }
+        else if (codepoint <= 0x10FFFF)
+        {
+            // 4-byte UTF-8, 0b11110xxx 0b10xxxxxx 0b10xxxxxx 0b10xxxxxx
+            result += static_cast<char>(0xF0 | (codepoint >> 18));
+            result += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+            result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+            result += static_cast<char>(0x80 | (codepoint & 0x3F));
+        }
+    }
+
+    template <typename StreamT>
+    std::uint32_t JSONStringParser<StreamT>::get_codepoint(std::uint16_t high, std::uint16_t low)
+    {
+        return
+            0x10000 | ((static_cast<std::uint32_t>(high) & 0x03FF) << 10) | (static_cast<std::uint32_t>(low) & 0x03FF);
+    }
+
+    template <typename StreamT>
+    void JSONStringParser<StreamT>::unescape_character()
     {
         switch (peek())
         {
-        case '\"': buf += '\"'; advance(); break;
-        case '\\': buf += '\\'; advance(); break;
-        case '/': buf += '/'; advance(); break;
-        case 'b': buf += '\b'; advance(); break;
-        case 'f': buf += '\f'; advance(); break;
-        case 'n': buf += '\n'; advance(); break;
-        case 'r': buf += '\r'; advance(); break;
-        case 't': buf += '\t'; advance(); break;
+        case '\"': result += '\"'; advance(); break;
+        case '\\': result += '\\'; advance(); break;
+        case '/': result += '/'; advance(); break;
+        case 'b': result += '\b'; advance(); break;
+        case 'f': result += '\f'; advance(); break;
+        case 'n': result += '\n'; advance(); break;
+        case 'r': result += '\r'; advance(); break;
+        case 't': result += '\t'; advance(); break;
         case 'u':
-            { // TODO: 解析 utf-16 代理, 没做呢
+            {
+                auto upos = tell_pos();
                 advance();
-                // char buf[5]{};
-                if constexpr (isContiguousStream_v<StreamT>)
+
+                auto [cp, type] = read_hex4(upos);
+
+                switch (type)
                 {
-                    std::string_view num_buf = m_stream.get_chunk(tell_pos(), 4);
-                    auto [code, err] = parse_hex4(num_buf);
-                    if (err)
-                        throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
-                    seek(4);
-                }
-                else
-                {
-                    std::string num_buf;
-                    num_buf += advance();
-                    num_buf += advance();
-                    num_buf += advance();
-                    num_buf += advance();
-                    auto [code, err] = parse_hex4(num_buf);
-                    if (err)
-                        throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", tell_pos());
+                case UCPStatus::SINGLE:
+                    append_utf8(cp);
+                    break;
+                case UCPStatus::HIGH:
+                    {
+                        for (auto ch: {'\\', 'u'})
+                        {
+                            JSONPP_CHECK_EOF_();
+                            if (advance() != ch)
+                                throw JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
+                        }
+                        auto [cp_low, type_low] = read_hex4(upos);
+                        if (type_low != UCPStatus::LOW)
+                            throw JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
+
+                        append_utf8(get_codepoint(cp, cp_low));
+                        break;
+                    }
+                case UCPStatus::LOW:
+                    throw JSONParseError("Unexpected low surrogate without preceding high surrogate", upos);
                 }
                 break;
             }
         default:
             throw JSONParseError("Invalid escape character", tell_pos());
         }
-
     }
 
     template <typename StreamT>
     std::string JSONStringParser<StreamT>::parse()
-    { // TODO: 处理转义字符
+    {
         size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
         advance();
 
-        std::string str;
         if constexpr (isSizedStream_v<StreamT>)
         { // 如果能直接得到整个流的大小则直接预留空间
-            str.reserve(size());
+            result.reserve(size());
         }
 
-        // TODO: 分别为随机访问流和顺序流编写parse代码(前者分块写入, 后者逐字符)
+        // TODO: 顺序流parse代码待测试(后者逐字符)
         while (!eof())
         {
             if constexpr (isContiguousStream_v<StreamT>)
@@ -176,7 +246,7 @@ namespace JSONpp
                 });
 
                 if (!chunk.empty())
-                    str.append(chunk);
+                    result.append(chunk);
                 // 下面检查为什么停下
             }
 
@@ -187,7 +257,7 @@ namespace JSONpp
             if (ch == '\\')
             {
                 advance();
-                unescape_character(str);
+                unescape_character();
             }
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
             else if (ch < 0x20)
@@ -195,7 +265,7 @@ namespace JSONpp
             else
             {
                 // 只有 IStreamStream 会在这里命中好字符, StringViewStream 已经在 chunk 中处理了它们
-                str += ch;
+                result += ch;
             }
         }
 
@@ -203,7 +273,7 @@ namespace JSONpp
             throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
         advance(); // 跳过右引号
-        return str;
+        return std::move(result);
     }
     /*
      * end JSONStringParser
@@ -289,11 +359,8 @@ namespace JSONpp
     template <typename StreamT>
     void Parser<StreamT>::skip_whitespace()
     {
-        // TODO: 针对随机访问流进行优化
         while (!eof() && is_whitespace(peek()))
-        {
             advance();
-        }
     }
 
     template <typename StreamT>

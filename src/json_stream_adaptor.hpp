@@ -25,26 +25,32 @@ namespace JSONpp
         size_t tell_pos() const noexcept { return pos; }
         size_t size() const noexcept { return data.size(); }
         bool eof() { return pos >= data.size(); }
+        void seek(size_t step) noexcept
+        {
+            assert(pos + step <= data.size() && "StringViewStream::seek out of bounds!");
+            pos += step;
+        }
+        std::string_view get_chunk(size_t begin, size_t length) const noexcept
+        {
+            assert(begin <= data.size() && "StringViewStream::get_chunk invalid begin!");
+            return data.substr(begin, length);
+        }
 
         template <typename FunctorT>
-        std::string_view read_chunk_until(FunctorT predicate) &;
+        std::string_view read_chunk_until(FunctorT predicate) &
+        {
+            std::string_view remaining = data.substr(pos);
+            auto it = std::find_if(remaining.begin(), remaining.end(), predicate);
+            auto chunk_size = std::distance(remaining.begin(), it);
+            // 获取块 (如果 chunk_size=0 返回空视图)
+            std::string_view chunk = data.substr(pos, chunk_size);
 
+            pos += chunk_size;
+
+            return chunk;
+        }
         explicit StringViewStream(std::string_view doc): data(doc), pos(0) {}
     };
-
-    template <typename FunctorT>
-    std::string_view StringViewStream::read_chunk_until(FunctorT predicate) &
-    {
-        std::string_view remaining = data.substr(pos);
-        auto it = std::find_if(remaining.begin(), remaining.end(), predicate);
-        auto chunk_size = std::distance(remaining.begin(), it);
-        // 获取块 (如果 chunk_size=0 返回空视图)
-        std::string_view chunk = data.substr(pos, chunk_size);
-
-        pos += chunk_size;
-
-        return chunk;
-    }
 
     class IstreamStream
     {

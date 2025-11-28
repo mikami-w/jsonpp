@@ -26,6 +26,7 @@ using ParserBase<StreamT>::peek;            \
 using ParserBase<StreamT>::advance;         \
 using ParserBase<StreamT>::tell_pos;        \
 using ParserBase<StreamT>::eof;             \
+using ParserBase<StreamT>::consume;         \
 using ParserBase<StreamT>::size;            \
 using ParserBase<StreamT>::seek;            \
 using ParserBase<StreamT>::get_chunk;       \
@@ -54,14 +55,11 @@ namespace JSONpp
         StreamT& m_stream;
 
     public:
-        char peek() const { return m_stream.peek(); }
-        char advance() { return m_stream.advance(); }
-        size_t tell_pos() const { return m_stream.tell_pos(); }
-        bool eof() const { return m_stream.eof(); }
         char peek() const noexcept { return m_stream.peek(); }
         char advance() noexcept { return m_stream.advance(); }
         size_t tell_pos() const noexcept { return m_stream.tell_pos(); }
         bool eof() const noexcept { return m_stream.eof(); }
+        void consume(char expected, std::exception const& e) { if (advance() == expected); else throw e; }
 
         size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
             else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
@@ -121,10 +119,9 @@ namespace JSONpp
         std::uint16_t value;
         char num_buf[4];
         for (int i = 0; i < 4; ++i)
-        {
-            JSONPP_CHECK_EOF_();
             num_buf[i] = advance();
-        }
+        JSONPP_CHECK_EOF_();
+
         auto [ptr, ec] = std::from_chars(num_buf, num_buf + 4, value, 16);
         if (ec == std::errc() && ptr == num_buf + 4)
         {
@@ -175,7 +172,7 @@ namespace JSONpp
     std::uint32_t JSONStringParser<StreamT>::get_codepoint(std::uint16_t high, std::uint16_t low)
     {
         return
-            0x10000 | ((static_cast<std::uint32_t>(high) & 0x03FF) << 10) | (static_cast<std::uint32_t>(low) & 0x03FF);
+            0x10000 | (((std::uint32_t)high & 0x03FF) << 10) | ((std::uint32_t)low & 0x03FF);
     }
 
     template <typename StreamT>
@@ -205,12 +202,8 @@ namespace JSONpp
                     break;
                 case UCPStatus::HIGH:
                     {
-                        for (auto ch: {'\\', 'u'})
-                        {
-                            JSONPP_CHECK_EOF_();
-                            if (advance() != ch)
-                                throw JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
-                        }
+                        consume('\\', JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
+                        consume('u', JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
                         auto [cp_low, type_low] = read_hex4(upos);
                         if (type_low != UCPStatus::LOW)
                             throw JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
@@ -363,7 +356,7 @@ namespace JSONpp
     template <typename StreamT>
     void Parser<StreamT>::skip_whitespace() noexcept
     {
-        while (!eof() && is_whitespace(peek()))
+        while (is_whitespace(peek()))
             advance();
     }
 
@@ -461,17 +454,18 @@ namespace JSONpp
         {
             arr.push_back(parse_value());
             skip_whitespace();
-            JSONPP_CHECK_EOF_();
 
             // json数组中对象以外的字符只能是空白字符或'['或']'或','
             if (peek() == ']')
                 break;
             else if (peek() != ',')
+            {
+                JSONPP_CHECK_EOF_();
                 throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
+            }
             advance(); // 跳过 ','
 
             skip_whitespace();
-            JSONPP_CHECK_EOF_();
 
             if (peek() == ']')
                 throw JSONParseError("Expected value after comma, but found ']' instead", tell_pos());
@@ -499,10 +493,12 @@ namespace JSONpp
                 throw JSONTypeError("Key of an object must be string");
 
             skip_whitespace();
-            JSONPP_CHECK_EOF_();
 
             if (peek() != ':')
+            {
+                JSONPP_CHECK_EOF_();
                 throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
+            }
             advance();
 
             skip_whitespace();
@@ -510,16 +506,17 @@ namespace JSONpp
             obj[key.as_string()] = val;
 
             skip_whitespace();
-            JSONPP_CHECK_EOF_();
 
             if (peek() == '}')
                 break;
             else if (peek() != ',')
+            {
+                JSONPP_CHECK_EOF_();
                 throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
+            }
             advance(); // skip comma
 
             skip_whitespace();
-            JSONPP_CHECK_EOF_();
 
             if (peek() == '}')
                 throw JSONParseError("Expected value after comma, but found '}' instead", tell_pos());

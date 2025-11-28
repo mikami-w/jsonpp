@@ -353,7 +353,7 @@ namespace JSONpp
     template <typename StreamT>
     bool Parser<StreamT>::is_whitespace(char ch)
     {
-        return std::string_view(" \n\r\t").find(ch) != std::string_view::npos;
+        return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
     }
 
     template <typename StreamT>

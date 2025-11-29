@@ -146,6 +146,15 @@ namespace JSONpp
          * end accessors for array and object
          */
 
+        bool operator==(json const& other) const {
+            if (value.index() != other.value.index()) return false;
+            return value == other.value;
+        }
+
+        bool operator!=(json const& other) const {
+            return !(*this == other);
+        }
+
         // The stream itself has the function of adding \ (escaping) to characters that need to be escaped. This process occurs from memory to the stream.
         friend std::ostream& operator<<(std::ostream& os, json const& val);
 

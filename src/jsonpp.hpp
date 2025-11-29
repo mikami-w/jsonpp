@@ -2,6 +2,7 @@
 #define JSONPP_HPP
 
 #include <cstdint>
+#include <sstream>
 #include <string>
 #include <variant>
 #include <vector>
@@ -10,7 +11,8 @@
 
 #include "jsonpp.hpp"
 
-namespace JSONpp{
+namespace JSONpp
+{
     class json;
 
     using null = std::nullptr_t;
@@ -148,6 +150,7 @@ namespace JSONpp{
         friend std::ostream& operator<<(std::ostream& os, json const& val);
 
         std::string stringify() const;
+
 
     }; // class json
 

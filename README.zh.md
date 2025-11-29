@@ -17,7 +17,9 @@
   - `object`（对象）
 - **类型安全的 API**: 使用模板进行编译时类型检查
 - **基于异常的错误处理**: 为无效 JSON 提供清晰的错误信息
-- **流支持**: 通过自定义流适配器实现灵活的 I/O
+- **流式解析支持**: 支持从 `std::string_view` 和 `std::istream` 解析，提供自定义流适配器
+- **灵活的流架构**: 支持不同类型的流（连续、可寻址、可获取大小或顺序流）
+- **Unicode 支持**: 完整的 UTF-8 编码/解码，正确处理代理对
 - **零依赖**: 仅需要 C++17 标准库
 
 ## 环境要求
@@ -40,11 +42,13 @@ make
 ### 头文件集成
 
 只需将 `src/` 文件夹中的以下文件复制到您的项目中：
-- `src/jsonpp.hpp`
-- `src/jsonpp.cpp`
-- `src/jsonexception.hpp`
-- `src/json_stream_adaptor.hpp`
-- `src/stream_traits.hpp`
+- `src/jsonpp.hpp` - 主 JSON 类和公共 API
+- `src/jsonpp.cpp` - 实现文件
+- `src/jsonexception.hpp` - 异常定义
+- `src/parser.hpp` - JSON 解析逻辑
+- `src/serializer.hpp` - JSON 序列化逻辑
+- `src/json_stream_adaptor.hpp` - 流适配器实现
+- `src/stream_traits.hpp` - 流类型特征
 
 ## 快速开始
 
@@ -53,9 +57,10 @@ make
 ```cpp
 #include "jsonpp.hpp"
 #include <iostream>
+#include <fstream>
 
 int main() {
-    // 解析 JSON 字符串
+    // 方法 1：从字符串解析（使用零拷贝的 StringViewStream）
     auto j = JSONpp::parse(R"({
         "name": "张三",
         "age": 30,
@@ -66,6 +71,10 @@ int main() {
             "zip": "100000"
         }
     })");
+    
+    // 方法 2：从文件流解析（使用 IStreamStream）
+    std::ifstream file("data.json");
+    auto j2 = JSONpp::parse(file);
     
     // 访问值
     std::cout << j["name"].as_string() << std::endl;        // "张三"
@@ -251,17 +260,79 @@ try {
 }
 ```
 
-## 流支持
+## 流式解析支持
 
-该库包含用于灵活 I/O 的自定义流适配器：
+该库提供灵活的流式解析功能，包含多种内置流适配器：
+
+### 从字符串视图解析（零拷贝）
 
 ```cpp
-#include "json_stream_adaptor.hpp"
-#include "stream_traits.hpp"
+#include "jsonpp.hpp"
 
-// 自定义流处理
-// 有关实现自定义流的详细信息，请参见 json_stream_adaptor.hpp
+std::string_view json_data = R"({"key": "value"})";
+json j = JSONpp::parse(json_data);  // 零拷贝解析
 ```
+
+### 从 std::istream 解析
+
+```cpp
+#include "jsonpp.hpp"
+#include <fstream>
+
+std::ifstream file("data.json");
+json j = JSONpp::parse(file);  // 直接流式解析
+file.close();
+```
+
+### 流适配器架构
+
+该库使用基于特征的流系统，支持不同的流能力：
+
+- **基础流**: 提供 `peek()`、`advance()`、`tell_pos()` 和 `eof()`
+- **可获取大小流**: 额外提供 `size()` 获取流总大小
+- **可寻址流**: 额外提供 `seek()` 用于随机访问
+- **连续流**: 额外提供 `get_chunk()` 和 `read_chunk_until()` 用于高效批量操作
+
+#### 内置流适配器
+
+1. **StringViewStream**: 从 `std::string_view` 零拷贝解析
+   - 连续、可获取大小、可寻址
+   - 内存中 JSON 的最佳性能
+
+2. **IStreamStream**: 从任意 `std::istream` 解析
+   - 仅支持顺序访问
+   - 支持文件流、字符串流、网络流等
+
+### 自定义流实现
+
+您可以通过提供必需的接口实现自定义流适配器：
+
+```cpp
+class CustomStream {
+public:
+    char peek() const noexcept;      // 查看当前字符
+    char advance() noexcept;         // 消费并返回当前字符
+    std::size_t tell_pos() const noexcept;  // 获取当前位置
+    bool eof() const noexcept;       // 检查是否到达流末尾
+    
+    // 可选：用于可获取大小的流
+    std::size_t size() const noexcept;
+    
+    // 可选：用于可寻址的流
+    void seek(std::size_t step) noexcept;
+    
+    // 可选：用于连续流
+    std::string_view get_chunk(std::size_t begin, std::size_t length) const noexcept;
+    template <typename FunctorT>
+    std::string_view read_chunk_until(FunctorT predicate) &;
+};
+
+// 与解析器配合使用
+CustomStream stream(...);
+json j = JSONpp::parse(stream);
+```
+
+有关实现细节，请参见 `src/json_stream_adaptor.hpp` 和 `src/stream_traits.hpp`。
 
 ## 测试
 
@@ -275,10 +346,12 @@ try {
   - 测试无效 JSON 和错误条件
   - 通过 `.generateErrorHandlingTestFiles.sh` 生成
 
-运行测试：
+构建并运行测试：
 
 ```bash
-cd cmake-build-debug
+mkdir build && cd build
+cmake ..
+make
 ./JSONpp
 ```
 
@@ -287,29 +360,67 @@ cd cmake-build-debug
 ```
 JSONpp/
 ├── src/
-│   ├── jsonpp.hpp                 # 主头文件
-│   ├── jsonpp.cpp               # 实现文件
-│   ├── jsonexception.hpp          # 异常定义
-│   ├── json_stream_adaptor.hpp    # 流适配器工具
-│   └── stream_traits.hpp          # 流特征
+│   ├── jsonpp.hpp                 # 主 JSON 类和公共 API
+│   ├── jsonpp.cpp                 # json 类方法实现
+│   ├── jsonexception.hpp          # 异常定义（JSONParseError、JSONTypeError 等）
+│   ├── parser.hpp                 # JSON 解析逻辑，支持模板化流
+│   ├── serializer.hpp             # JSON 序列化和字符串化
+│   ├── json_stream_adaptor.hpp    # 流适配器实现（StringViewStream、IStreamStream）
+│   └── stream_traits.hpp          # 流类型特征和概念
 ├── tests/
-│   ├── test.cpp               # 测试实现
-│   ├── .generateUsabilityTestFiles.sh      # 可用性测试用例生成脚本
-│   ├── .generateErrorHandlingTestFiles.sh  # 错误处理测试用例生成脚本
-│   ├── usability/             # 可用性测试用例
-│   └── error_handling/        # 错误处理测试用例
-├── CMakeLists.txt           # 构建配置
-├── LICENSE                  # Apache License 2.0
-├── README.md                # 英文版说明文件
-└── README.zh.md             # 当前文件
+│   ├── test.cpp                   # 测试运行器实现
+│   ├── .generateUsabilityTestFiles.sh      # 生成可用性测试用例的脚本
+│   └── .generateErrorHandlingTestFiles.sh  # 生成错误处理测试用例的脚本
+├── CMakeLists.txt                 # 构建配置
+├── LICENSE                        # Apache License 2.0
+├── README.md                      # 英文文档
+└── README.zh.md                   # 中文文档（当前文件）
 ```
+
+
+## 架构
+
+### 核心组件
+
+1. **json 类（`jsonpp.hpp`）**：主 JSON 值容器
+   - 使用 `std::variant` 存储不同的 JSON 类型
+   - 提供类型安全的访问器和类型检查方法
+   - 支持运算符重载以实现自然语法
+
+2. **解析器（`parser.hpp`）**：基于模板的解析引擎
+   - `Parser<StreamT>`：接受任何流类型的主解析器模板
+   - `JSONStringParser<StreamT>`：支持 Unicode 的专用字符串解析器
+   - `ParserBase<StreamT>`：提供流接口抽象的基类
+
+3. **序列化器（`serializer.hpp`）**：JSON 到字符串的转换
+   - 实现 `operator<<` 用于流输出
+   - 处理正确的字符串转义和 Unicode 编码
+   - 支持所有 JSON 数据类型
+
+4. **流系统**：灵活的输入处理
+   - **特征（`stream_traits.hpp`）**：基于 SFINAE 的类型特征，用于检测流能力
+   - **适配器（`json_stream_adaptor.hpp`）**：内置流实现
+     - `StringViewStream`：连续、零拷贝访问
+     - `IStreamStream`：顺序流访问
+
+### 设计原则
+
+- **基于模板的流**：解析器按流类型模板化，允许编译时优化
+- **基于特征的调度**：使用 SFINAE 根据流能力选择最优解析策略
+- **异常安全**：对解析错误提供强异常保证
+- **以头文件为主的设计**：易于集成，编译开销最小
 
 ## 性能考虑
 
-- 使用 `std::variant` 实现类型安全的值存储
-- 在可能的情况下使用零拷贝的字符串视图进行解析
-- 利用移动语义实现高效的值传递
-- 使用 `std::unordered_map` 实现快速的对象键查找
+- **类型安全存储**: 使用 `std::variant` 实现零开销的类型安全值存储
+- **零拷贝解析**: `StringViewStream` 提供从 `std::string_view` 的零拷贝解析
+- **优化的字符串解析**: 
+  - 连续流使用基于块的解析，通过 `read_chunk_until()` 快速提取字符串
+  - 顺序流回退到逐字符解析
+- **移动语义**: 整个 API 中高效的值传递
+- **快速对象访问**: 使用 `std::unordered_map` 实现 O(1) 平均情况下的对象键查找
+- **Unicode 处理**: 高效的 UTF-8 编码/解码，正确支持代理对
+- **流适配器**: 基于模板的流架构允许编译器根据流能力进行优化
 
 ## 限制
 
@@ -399,19 +510,30 @@ std::cout << config.stringify() << std::endl;
 答：单个 `json` 对象不是线程安全的。如果在线程之间共享对象，请使用外部同步。
 
 **问：我可以从文件解析 JSON 吗？**  
-答：可以，先将文件读入字符串，然后使用 `JSONpp::parse()`：
+答：可以！该库支持直接流式解析：
 ```cpp
+// 方法 1：直接流式解析（推荐）
+std::ifstream file("data.json");
+json j = JSONpp::parse(file);
+
+// 方法 2：先读入字符串（利用 string_view 优势）
 std::ifstream file("data.json");
 std::string content((std::istreambuf_iterator<char>(file)),
                      std::istreambuf_iterator<char>());
-json j = JSONpp::parse(content);
+json j = JSONpp::parse(content);  // 使用零拷贝的 StringViewStream
 ```
 
+**问：字符串解析和流式解析的性能差异是什么？**  
+答：`StringViewStream`（与 `std::string_view` 配合使用）由于零拷贝和连续内存访问提供最佳性能。`IStreamStream` 适合需要流式输入（网络、大文件）的情况，但由于逐字符读取速度略慢。
+
 **问：如何处理大数字？**  
-答：该库对整数使用 `std::int64_t`，对浮点数使用 `double`。对于任意精度，您可能需要将数字存储为字符串。
+答：该库对整数使用 `std::int64_t`（范围：-2^63 到 2^63-1），对浮点数使用 `double`。对于任意精度，您可能需要将数字存储为字符串。
 
 **问：支持 JSON 注释吗？**  
 答：不支持，纯 JSON 不支持注释。如果需要注释支持，请使用 JSONC 或 JSON5 解析器。
+
+**问：如何处理 Unicode？**  
+答：该库完全支持 UTF-8 编码，并正确处理 Unicode 转义序列（例如 `\uXXXX`），包括用于基本多文种平面之外字符的代理对。
 
 ## 致谢
 

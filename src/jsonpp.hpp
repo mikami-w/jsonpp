@@ -160,6 +160,8 @@ namespace JSONpp
      */
     json parse(std::string_view json_str);
 
+    json parse(std::istream& json_istream);
+
 } // namespace JSONpp
 
 #endif //JSONPP_HPP

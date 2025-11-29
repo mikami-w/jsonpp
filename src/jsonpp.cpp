@@ -135,4 +135,10 @@ namespace JSONpp
         StringViewStream stream(json_str);
         return Parser<StringViewStream>(stream).parse();
     }
+
+    json parse(std::istream& json_istream)
+    {
+        IStreamStream stream(json_istream);
+        return Parser<IStreamStream>(stream).parse();
+    }
 }

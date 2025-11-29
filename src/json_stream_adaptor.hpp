@@ -19,13 +19,16 @@ namespace JSONpp
         char peek() const noexcept { if (pos < data.size()) return data[pos]; else return 0; }
         char advance() noexcept { if (pos < data.size()) return data[pos++]; else return 0; }
         std::size_t tell_pos() const noexcept { return pos; }
+        bool eof() const noexcept { return pos >= data.size(); }
+
         std::size_t size() const noexcept { return data.size(); }
-        bool eof() { return pos >= data.size(); }
+
         void seek(std::size_t step) noexcept
         {
             assert(pos + step <= data.size() && "StringViewStream::seek out of bounds!");
             pos += step;
         }
+
         std::string_view get_chunk(std::size_t begin, std::size_t length) const noexcept
         {
             assert(begin <= data.size() && "StringViewStream::get_chunk invalid begin!");
@@ -48,10 +51,33 @@ namespace JSONpp
         explicit StringViewStream(std::string_view doc): data(doc), pos(0) {}
     };
 
-    class IstreamStream
+    class IStreamStream
     {
+        std::istream& is;
+        std::size_t pos;
+    public:
+        char peek() const noexcept
+        {
+            auto c = is.peek();
+            if (c == EOF) {
+                return 0;
+            }
+            return static_cast<char>(c);
+        }
+        char advance() noexcept
+        {
+            auto c = is.get();
+            if (c == EOF)
+            {
+                return 0;
+            }
+            ++pos;
+            return static_cast<char>(c);
+        }
+        std::size_t tell_pos() const noexcept { return pos; }
+        bool eof() { return is.peek() == EOF; }
 
+        explicit IStreamStream(std::istream& _is): is(_is), pos(0) {}
     };
-
 }
 #endif //JSONPP_JSON_STREAM_ADAPTOR_HPP

@@ -1,8 +1,8 @@
 #include "jsonpp.hpp"
 
 #include <algorithm>
-#include <cstring>
 #include <filesystem>
+#include <sstream>
 #include <stdexcept>
 #include "parser.hpp"
 #include "stream_traits.hpp"
@@ -14,8 +14,6 @@
 #ifndef NDEBUG
 #include <cassert>
 #include <iostream>
-#include <sstream>
-using std::cerr, std::endl;
 #endif
 
 

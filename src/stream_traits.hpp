@@ -27,8 +27,8 @@ namespace JSONpp::traits
 
         public:
             static constexpr bool value = std::conjunction_v<
-                std::is_same<peek_return_t, char>,
-                std::is_same<advance_return_t, char>,
+                std::is_same<peek_return_t, int>,
+                std::is_same<advance_return_t, int>,
                 std::is_same<tell_pos_return_t, std::size_t>,
                 std::is_same<eof_return_t, bool>
             >;
@@ -36,7 +36,7 @@ namespace JSONpp::traits
 
         struct PredicateFunctor
         {
-            bool operator()(char const& c) const { return false; }
+            bool operator()(char const&) const { return false; }
         };
     }
 

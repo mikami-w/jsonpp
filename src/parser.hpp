@@ -45,11 +45,13 @@ namespace JSONpp
         StreamT& m_stream;
 
     public:
-        char peek() const noexcept { return m_stream.peek(); }
-        char advance() noexcept { return m_stream.advance(); }
+        int peek() const noexcept { return m_stream.peek(); }
+        int advance() noexcept { return m_stream.advance(); }
         std::size_t tell_pos() const noexcept { return m_stream.tell_pos(); }
         bool eof() const noexcept { return m_stream.eof(); }
-        void consume(char expected, std::exception const& e) { if (advance() == expected); else throw e; }
+
+        template <typename ExceptionT>
+        void consume(char expected, ExceptionT const& e) { if (advance() == expected); else throw e; }
 
         std::size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
             else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
@@ -240,7 +242,7 @@ namespace JSONpp
                 // 下面检查为什么停下
             }
 
-            auto ch = peek();
+            int ch = peek();
             if (ch == '\"')
                 break;
 

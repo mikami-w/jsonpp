@@ -9,15 +9,14 @@
 
 namespace JSONpp
 {
-    // 流适配器
     class StringViewStream
     {
         std::string_view data;
         std::size_t pos;
 
     public:
-        char peek() const noexcept { if (pos < data.size()) return data[pos]; else return 0; }
-        char advance() noexcept { if (pos < data.size()) return data[pos++]; else return 0; }
+        int peek() const noexcept { if (pos < data.size()) return static_cast<unsigned char>(data[pos]); else return EOF; } // To ensure that 255 is correctly handled
+        int advance() noexcept { if (pos < data.size()) return static_cast<unsigned char>(data[pos++]); else return EOF; }
         std::size_t tell_pos() const noexcept { return pos; }
         bool eof() const noexcept { return pos >= data.size(); }
 
@@ -41,7 +40,7 @@ namespace JSONpp
             std::string_view remaining = data.substr(pos);
             auto it = std::find_if(remaining.begin(), remaining.end(), predicate);
             auto chunk_size = std::distance(remaining.begin(), it);
-            // 获取块 (如果 chunk_size=0 返回空视图)
+            // Get chunk (if chunk_size=0, return empty view)
             std::string_view chunk = data.substr(pos, chunk_size);
 
             pos += chunk_size;
@@ -56,28 +55,18 @@ namespace JSONpp
         std::istream& is;
         std::size_t pos;
     public:
-        char peek() const noexcept
-        {
-            auto c = is.peek();
-            if (c == EOF) {
-                return 0;
-            }
-            return static_cast<char>(c);
-        }
-        char advance() noexcept
+        int peek() const { return is.peek(); }
+        int advance()
         {
             auto c = is.get();
-            if (c == EOF)
-            {
-                return 0;
-            }
-            ++pos;
-            return static_cast<char>(c);
+            if (c != EOF)
+                ++pos;
+            return c;
         }
         std::size_t tell_pos() const noexcept { return pos; }
-        bool eof() { return is.peek() == EOF; }
+        bool eof() const { return is.peek() == EOF; }
 
-        explicit IStreamStream(std::istream& _is): is(_is), pos(0) {}
+        explicit IStreamStream(std::istream& _is): is(_is), pos(0) { is.unsetf(std::ios::skipws); }
     };
 }
 #endif //JSONPP_JSON_STREAM_ADAPTOR_HPP

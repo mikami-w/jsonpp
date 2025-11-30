@@ -1,58 +1,78 @@
-//
-// Created on 2025/10/30.
-//
-
 #include <algorithm>
 #include <filesystem>
+#include <utility>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
+#include <map>
+#include <chrono>
+
 #include "../src/jsonpp.hpp"
 
 namespace fs = std::filesystem;
 
 namespace Test
 {
-    static constexpr char const* testFilePath_usability = "../tests/usability/";
-    static constexpr char const* testFilePath_errorHandling = "../tests/error_handling/";
+    unsigned result[6]{}; // Passed, IThrew, SThrew, Inequal, SFailed, IFailed
 
-    struct TestDirectoryEntries
+    static constexpr char const* testFilePath = "../tests/";
+
+    using TestDirectoryEntries = std::unordered_map<std::string, std::vector<fs::directory_entry>>;
+
+    enum TestStatus: std::uint8_t
     {
-        std::vector<fs::directory_entry>& usability;
-        std::vector<fs::directory_entry>& error_handling;
+        Passed = 0,
+        IThrew,
+        SThrew,
+        Inequal,
+        SFailed,
+        IFailed
     };
+
+    std::string getDateTimeString()
+    {
+        auto now = std::chrono::system_clock::now();
+        std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+        std::ostringstream oss;
+        oss << std::put_time(std::localtime(&now_c), "%Y%m%d_%H%M%S");
+        return oss.str();
+    }
 
     inline bool is_hidden(fs::directory_entry const& file)
     {
         return file.path().filename().string().front() == '.';
     }
 
-    TestDirectoryEntries getSortedDirectoryEntries()
+    TestDirectoryEntries& getSortedDirectoryEntries()
     {
-        static std::vector<fs::directory_entry> usa;
-        static std::vector<fs::directory_entry> err;
+        static TestDirectoryEntries entries;
         static bool initialized = false;
 
         if (!initialized)
         {
-            for (auto& file : fs::directory_iterator(testFilePath_usability))
+            for (auto& dir : fs::directory_iterator(testFilePath))
             {
-                usa.push_back(file);
-            }
-            std::sort(usa.begin(), usa.end());
+                if (is_hidden(dir)) continue;
+                if (!dir.is_directory()) continue;
 
-            for (auto& file : fs::directory_iterator(testFilePath_errorHandling))
+                for (auto& file: fs::directory_iterator(dir))
+                {
+                    entries[dir.path().filename()].push_back(file);
+                }
+            }
+            for (auto& [key, vec] : entries)
             {
-                err.push_back(file);
+                std::sort(vec.begin(), vec.end());
             }
-            std::sort(err.begin(), err.end());
 
+            // std::cout << "====" << entries.size() << "====" << std::endl;
             initialized = true;
         }
 
-        return {usa, err};
+        return entries;
     }
 
     std::string readFileToString(std::string const& filename) {
@@ -75,74 +95,133 @@ namespace Test
         return content;
     }
 
-    void test_usability()
+    class Testee
     {
-        std::cout << "========== USABILITY TEST ==========" << std::endl;
-        for (auto const& file: getSortedDirectoryEntries().usability)
-        {
-            std::cout << "-------- " << file.path().filename() << " --------" << std::endl;
-            try
-            {
-                std::string file_content = readFileToString(file.path().string());
-                auto j = JSONpp::parse(file_content);
+        fs::directory_entry filedir;
+    public:
+        std::string getFileName() const { return filedir.path().filename().string(); }
+        std::string getString() const { return readFileToString(filedir.path().string()); }
+        std::unique_ptr<std::istream> getIStreamPtr() const { return std::make_unique<std::ifstream>(filedir.path()); }
 
-                std::cout << "File contents:\t" << file_content;
-                std::cout << "Parsed JSON:\t" << j << std::endl;
-            } catch (std::exception& e)
-            {
-                std::cout << "Error occurred in file " << file.path().filename() << std::endl;
-                std::cout << e.what() << std::endl;
-            }
-            std::cout << "END----- " << file.path().filename() << " --------" << std::endl;
+        explicit Testee(fs::directory_entry dir) : filedir(std::move(dir))
+        {
+            if (!dir.is_regular_file())
+                throw std::invalid_argument("Testee must be initialized with a directory entry representing a file.");
         }
-        std::cout << "========== USABILITY TEST END ==========" << std::endl;
+    };
+
+    void doTestFor(Testee const& t, std::ostream& logger = std::cout)
+    {
+        logger << "\nTestee: " << t.getFileName() << std::endl;
+        logger << "Content:\n" << t.getString();
+
+        bool passed = true;
+        try
+        {
+            auto js = JSONpp::parse(t.getString());
+            logger << "Parsed JSON from string:\t" << js << std::endl;
+        } catch (std::runtime_error& e)
+        {
+            passed = false;
+            ++result[SThrew];
+            logger << "String parsing threw an exception for file " << t.getFileName() << std::endl;
+            logger << e.what() << std::endl;
+        } catch (std::exception& e)
+        {
+            passed = false;
+            ++result[SFailed];
+            logger << "Process was aborted while parsing string. Test failed for file " << t.getFileName() << std::endl;
+            logger << e.what() << std::endl;
+        }
+
+        try
+        {
+            auto jis = JSONpp::parse(*t.getIStreamPtr());
+            logger << "Parsed JSON from istream:\t" << jis << std::endl;
+
+            auto js = JSONpp::parse(t.getString());
+            if (js != jis)
+            {
+                passed = false;
+                ++result[Inequal];
+                logger << "Inequal JSONs parsed from string and istream in file " << t.getFileName() << std::endl;
+            }
+        } catch (std::runtime_error& e)
+        {
+            passed = false;
+            ++result[IThrew];
+            logger << "IStream parsing threw an exception for file " << t.getFileName() << std::endl;
+            logger << e.what() << std::endl;
+        } catch (std::exception& e)
+        {
+            passed = false;
+            ++result[IFailed];
+            logger << "Process was aborted while parsing istream. Test failed for file " << t.getFileName() << std::endl;
+            logger << e.what() << std::endl;
+        }
+
+        if (passed)
+        {
+            logger << "Test passed for file " << t.getFileName() << std::endl;
+            ++result[Passed];
+        }
     }
 
-    void test_error_handling()
+    void testAll(std::ostream& logger = std::cout)
     {
-        std::cout << "========== ERROR HANDLING TEST ==========" << std::endl;
-        int errors = 0;
-        for (auto const& file: getSortedDirectoryEntries().error_handling)
+        for (auto const& [dname, dirs] : getSortedDirectoryEntries())
         {
-            std::cout << "-------- " << file.path().filename() << " --------" << std::endl;
-            try
+            for (auto const& file : dirs)
             {
-                std::string file_content = readFileToString(file.path().string());
-                auto j = JSONpp::parse(file_content);
-            } catch (std::exception& e)
-            {
-                std::cout << "Error occurred in file " << file.path().filename();
-                std::cout << ": " << e.what() << std::endl;
-                ++errors;
+                Testee t(file);
+                doTestFor(t, logger);
             }
-            std::cout << "END----- " << file.path().filename() << " --------" << std::endl;
         }
-        std::cout << std::endl << errors << " errors was found." << std::endl;
-        std::cout << "========== ERROR HANDLING TEST END ==========" << std::endl;
+        auto& dirs = getSortedDirectoryEntries();
+        int total = 0;
+        for (auto const& [dname, dirs] : dirs)
+            total += dirs.size();
+
+        logger << "\nAll tests finished." << std::endl;
+        logger << "Total files: " << total << std::endl;
+        logger << "Passed: " << result[Passed] << std::endl;
+        logger << "IStream threw: " << result[IThrew] << std::endl;
+        logger << "String threw: " << result[SThrew] << std::endl;
+        logger << "Inequal: " << result[Inequal] << std::endl;
+        logger << "SFailed: " << result[SFailed] << std::endl;
+        logger << "IFailed: " << result[IFailed] << std::endl;
     }
 
     void temp_test()
     {
         using namespace JSONpp;
-        // std::cout << "😀你好" << std::endl;
-        json j = parse(R"("\uD83D\uDE00")");
-        std::cout << j.as_string() << std::endl;
+        using namespace Test;
+
+        std::string testdir = "error_handling";
+        std::string testnum = "010";
+        fs::directory_entry testfile("../tests/" + testdir + "/" + testdir + testnum + ".json");
+        doTestFor(Testee(testfile));
     }
 }
 
 int main()
 {
+    using namespace Test;
     //std::cout << "JSONpp::isContiguousStream_v<JSONpp::StringViewStream>: " << JSONpp::traits::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
 
-    Test::temp_test();
-    std::cout << std::endl;
-
-    // std::cout << "========== Running tests... ==========" << std::endl;
-    // Test::test_usability();
-    // std::cout << std::endl;
-    // Test::test_error_handling();
-    // std::cout << std::endl;
-
+    constexpr bool choice = 1;
+    if constexpr (choice)
+    {
+        std::ofstream logfile("/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log"
+           , std::ios::out | std::ios::trunc);
+        if (!logfile.is_open())
+            throw std::runtime_error("Could not open logfile");
+        testAll(logfile);
+    }
+    else
+    {
+        temp_test();
+    }
     return 0;
 }
 

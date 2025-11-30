@@ -256,6 +256,7 @@ namespace JSONpp
             {
                 // 只有 IStreamStream 会在这里命中好字符, StringViewStream 已经在 chunk 中处理了它们
                 result += ch;
+                advance();
             }
         }
 

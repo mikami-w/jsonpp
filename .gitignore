@@ -1,7 +1,9 @@
-DONOTADD/*
-main.cpp
-
 .idea
 .clang-tidy
-tests/error_handling
-tests/usability
+cmake-build-*
+
+tests/*
+!tests/test.cpp
+!tests/.*
+
+DONOTADD/*

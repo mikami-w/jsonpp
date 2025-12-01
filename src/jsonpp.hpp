@@ -11,6 +11,9 @@
 
 #include "jsonpp.hpp"
 #include "serializer.hpp"
+#include "jsonexception.hpp"
+#include "json_stream_adaptor.hpp"
+#include "parser.hpp"
 
 namespace JSONpp
 {
@@ -33,9 +36,10 @@ namespace JSONpp
 
     class json
     {
-        std::variant
+    public:
+        using JsonType = std::variant
         <
-            std::monostate, // 用于表示空的json
+            std::monostate,
             null,
             bool,
             std::int64_t,
@@ -43,7 +47,37 @@ namespace JSONpp
             std::string,
             array,
             object
-        > value;
+        >;
+
+    private:
+        JsonType value;
+
+        template <typename T>
+        static T& as_impl(JsonType& v, char const* typeName)
+        {
+            try
+            {
+                return std::get<T>(v);
+            }
+            catch (const std::bad_variant_access&)
+            {
+                throw JSONTypeError(std::string("Value is not a ") + typeName);
+            }
+        }
+
+        template <typename T>
+        static T const& as_impl(JsonType const& v, char const* typeName)
+        {
+            try
+            {
+                return std::get<T>(v);
+            }
+            catch (const std::bad_variant_access&)
+            {
+                throw JSONTypeError(std::string("Value is not a ") + typeName);
+            }
+        }
+
 
     public:
         /*
@@ -118,19 +152,19 @@ namespace JSONpp
         /*
          * asserted accessors
          */
-        bool as_bool() const;
-        std::int64_t as_int() const;
-        double as_float() const;
-        std::string const& as_string() const;
-        array const& as_array() const;
-        object const& as_object() const;
+        bool as_bool() const { return as_impl<bool>(value, "bool"); }
+        std::int64_t as_int() const { return as_impl<std::int64_t>(value, "int64"); }
+        double as_float() const { return as_impl<double>(value, "double"); }
+        std::string const& as_string() const { return as_impl<std::string>(value, "string"); }
+        array const& as_array() const { return as_impl<array>(value, "array"); }
+        object const& as_object() const { return as_impl<object>(value, "object"); }
 
-        bool& as_bool();
-        std::int64_t& as_int();
-        double& as_float();
-        std::string& as_string();
-        array& as_array();
-        object& as_object();
+        bool& as_bool() { return as_impl<bool>(value, "bool"); }
+        std::int64_t& as_int() { return as_impl<std::int64_t>(value, "int64"); }
+        double& as_float() { return as_impl<double>(value, "double"); }
+        std::string& as_string() { return as_impl<std::string>(value, "string"); }
+        array& as_array() { return as_impl<array>(value, "array"); }
+        object& as_object() { return as_impl<object>(value, "object"); }
         /*
          * end asserted accessors
          */
@@ -157,6 +191,7 @@ namespace JSONpp
         }
 
         void dump(std::string& buffer) const;
+        // void dump(std::ostream& os) const;
 
         // friend std::ostream& operator<<(std::ostream& os, json const& val);
 

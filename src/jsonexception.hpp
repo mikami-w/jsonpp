@@ -39,10 +39,10 @@ namespace JSONpp
     {
     public:
         static constexpr char const* DEPTH_LIMIT_EXCEEDED_MESSAGE
-            = "JSON parsing stopped: maximum nesting depth of " TO_STRING(MAX_NESTING_DEPTH) " exceeded.";
+            = "Maximum nesting depth of " TO_STRING(MAX_NESTING_DEPTH) " exceeded";
 
         JsonDepthLimitExceeded(std::size_t pos):
-            JsonException(DEPTH_LIMIT_EXCEEDED_MESSAGE + std::string("at position ") + std::to_string(pos)) {}
+            JsonException(DEPTH_LIMIT_EXCEEDED_MESSAGE + std::string(" at position ") + std::to_string(pos)) {}
     };
 
     /*

@@ -85,9 +85,9 @@ namespace Test
             for (auto& file: fs::directory_iterator(test_parsing))
             {
                 if (is_hidden(file)) continue;
-                if (file.path().filename().string() == "n_structure_100000_opening_arrays.json" ||
-                    file.path().filename().string() == "n_structure_open_array_object.json")
-                    continue; // These leads to stack overflow in our parser
+                // if (file.path().filename().string() == "n_structure_100000_opening_arrays.json" ||
+                //     file.path().filename().string() == "n_structure_open_array_object.json")
+                //     continue; // These leads to stack overflow in our parser
 
                 entries["test_parsing"].push_back(file);
             }
@@ -144,14 +144,25 @@ namespace Test
     int doTestFor(Testee const& t, std::ostream& logger = std::cout)
     {
         logger << "\nTestee: " << t.getFileName() << std::endl;
-        logger << "Content:\n" << t.getString() << std::endl;
+        if (t.getFileName() == "n_structure_100000_opening_arrays.json")
+        {
+            logger << "This file is specially marked. Content is 100,000 bytes, too large to write into log files." << std::endl;
+            logger << "Overview: [[[[[[[[[[[[[[[[[[[[[[[[..." << std::endl;
+        }
+        else if (t.getFileName() == "n_structure_open_array_object.json")
+        {
+            logger << "This file is specially marked. Content is 250,001 bytes, too large to write into log files." << std::endl;
+            logger << R"(Overview: [{"":[{"":[{"":[{"":[{"":[{"":[{"":[{"":...)" << std::endl;
+        }
+        else
+            logger << "Content:\n" << t.getString() << std::endl;
 
         bool passed = true;
         try
         {
             auto js = JSONpp::parse(t.getString());
             logger << "Parsed JSON from string:\t" << js << std::endl;
-        } catch (JSONpp::JsonParseError& e)
+        } catch (JSONpp::JsonException& e)
         {
             passed = false;
             ++result[SThrew];
@@ -177,7 +188,7 @@ namespace Test
                 ++result[Inequal];
                 logger << "Inequal JSONs parsed from string and istream in file " << t.getFileName() << std::endl;
             }
-        } catch (JSONpp::JsonParseError& e)
+        } catch (JSONpp::JsonException& e)
         {
             passed = false;
             ++result[IThrew];

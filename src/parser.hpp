@@ -271,6 +271,7 @@ namespace JSONpp
         using object = typename JsonType::object;
 
     private:
+        int nesting_depth;
 
         static bool is_whitespace(char ch) noexcept;
 
@@ -293,7 +294,7 @@ namespace JSONpp
     public:
         Parser() = delete;
 
-        explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream) {}
+        explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream), nesting_depth(0) {}
 
         JsonType parse();
     };
@@ -430,6 +431,10 @@ namespace JSONpp
     template <typename StreamT, typename JsonType>
     JsonType Parser<StreamT, JsonType>::parse_array()
     {
+        // Increase nesting depth counter and check limit
+        if (++nesting_depth > MAX_NESTING_DEPTH)
+            throw JsonDepthLimitExceeded(tell_pos());
+
         array arr;
         auto start = tell_pos(); // 跳过左 [
         advance();
@@ -457,13 +462,17 @@ namespace JSONpp
         JSONPP_CHECK_EOF_("array", start);
 
         advance(); // 跳过右 ]
-
+        --nesting_depth; // Decrease nesting depth counter before returning
         return {arr};
     }
 
     template <typename StreamT, typename JsonType>
     JsonType Parser<StreamT, JsonType>::parse_object()
     {
+        // Increase nesting depth counter and check limit
+        if (++nesting_depth > MAX_NESTING_DEPTH)
+            throw JsonDepthLimitExceeded(tell_pos());
+
         object obj;
         auto start = tell_pos(); // 跳过左 {
         advance();
@@ -507,7 +516,7 @@ namespace JSONpp
         JSONPP_CHECK_EOF_("object", start);
 
         advance(); // 跳过右 }
-
+        --nesting_depth; // Decrease nesting depth counter before returning
         return {obj};
     }
 

@@ -1,15 +1,15 @@
 #ifndef JSONPP_PARSER_H
 #define JSONPP_PARSER_H
 
+#include "macro_def.hpp"
 #include "stream_traits.hpp"
 #include "jsonexception.hpp"
+#include "basic_json.hpp"
 
 #include <exception>
 #include <string_view>
 #include <charconv>
 #include <cstddef>
-
-#include "jsonpp.hpp"
 
 #define JSONPP_IMPORT_PARSERBASE_MEMBERS_ \
 using ParserBase<StreamT>::m_stream;        \
@@ -75,14 +75,16 @@ namespace JSONpp
     /*
      * JSONStringParser
      */
-    template <typename StreamT>
+    template <typename StreamT, typename JsonType>
     class JSONStringParser : public ParserBase<StreamT>
     {
     protected:
         JSONPP_IMPORT_PARSERBASE_MEMBERS_
 
+        using string = typename JsonType::string;
+
     private:
-        std::string result;
+        string result;
 
         enum class UCPStatus: std::uint8_t // Unicode Code Point Status
         {
@@ -104,12 +106,12 @@ namespace JSONpp
 
     public:
         JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream), result() {}
-        std::string parse();
+        string parse();
 
     };
 
-    template <typename StreamT>
-    typename JSONStringParser<StreamT>::hex4_result JSONStringParser<StreamT>::read_hex4(std::size_t upos)
+    template <typename StreamT, typename JsonType>
+    typename JSONStringParser<StreamT, JsonType>::hex4_result JSONStringParser<StreamT, JsonType>::read_hex4(std::size_t upos)
     {
         std::uint16_t value;
         char num_buf[4];
@@ -132,8 +134,8 @@ namespace JSONpp
         else throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", upos);
     }
 
-    template <typename StreamT>
-    void JSONStringParser<StreamT>::append_utf8(std::uint32_t codepoint)
+    template <typename StreamT, typename JsonType>
+    void JSONStringParser<StreamT, JsonType>::append_utf8(std::uint32_t codepoint)
     {
         if (codepoint <= 0x7F)
         {
@@ -163,15 +165,15 @@ namespace JSONpp
         }
     }
 
-    template <typename StreamT>
-    std::uint32_t JSONStringParser<StreamT>::get_codepoint(std::uint16_t high, std::uint16_t low)
+    template <typename StreamT, typename JsonType>
+    std::uint32_t JSONStringParser<StreamT, JsonType>::get_codepoint(std::uint16_t high, std::uint16_t low)
     {
         return
             0x10000 | (((std::uint32_t)high & 0x03FF) << 10) | ((std::uint32_t)low & 0x03FF);
     }
 
-    template <typename StreamT>
-    void JSONStringParser<StreamT>::unescape_character()
+    template <typename StreamT, typename JsonType>
+    void JSONStringParser<StreamT, JsonType>::unescape_character()
     {
         switch (peek())
         {
@@ -216,8 +218,8 @@ namespace JSONpp
         }
     }
 
-    template <typename StreamT>
-    std::string JSONStringParser<StreamT>::parse()
+    template <typename StreamT, typename JsonType>
+    typename JSONStringParser<StreamT, JsonType>::string JSONStringParser<StreamT, JsonType>::parse()
     {
         std::size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
         advance();
@@ -275,11 +277,18 @@ namespace JSONpp
     /*
      * JSON Parser
      */
-    template <typename StreamT>
+    template <typename StreamT, typename JsonType>
     class Parser : public ParserBase<StreamT>
     {
     protected:
         JSONPP_IMPORT_PARSERBASE_MEMBERS_
+
+        using boolean = typename JsonType::boolean;
+        using number_int = typename JsonType::number_int;
+        using number_float = typename JsonType::number_float;
+        using string = typename JsonType::string;
+        using array = typename JsonType::array;
+        using object = typename JsonType::object;
 
     private:
 
@@ -289,28 +298,28 @@ namespace JSONpp
 
         void parse_literal(char const* lit, std::size_t len);
 
-        static json parse_number_from_chunk(std::string_view chunk, std::size_t start);
+        static JsonType parse_number_from_chunk(std::string_view chunk, std::size_t start);
 
-        json parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 json, 使 pos 指向被解析的 json 后的第一个字节
+        JsonType parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 basic_json, 使 pos 指向被解析的 basic_json 后的第一个字节
 
-        json parse_null();
-        json parse_true();
-        json parse_false();
-        json parse_number();
-        json parse_string();
-        json parse_array();
-        json parse_object();
+        JsonType parse_null();
+        JsonType parse_true();
+        JsonType parse_false();
+        JsonType parse_number();
+        JsonType parse_string();
+        JsonType parse_array();
+        JsonType parse_object();
 
     public:
         Parser() = delete;
 
         explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream) {}
 
-        json parse();
+        JsonType parse();
     };
 
-    template <typename StreamT>
-    void Parser<StreamT>::parse_literal(char const* lit, std::size_t len)
+    template <typename StreamT, typename JsonType>
+    void Parser<StreamT, JsonType>::parse_literal(char const* lit, std::size_t len)
     {
         for (std::size_t i = 0; i < len; ++i)
         {
@@ -319,8 +328,8 @@ namespace JSONpp
         }
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_number_from_chunk(std::string_view chunk, std::size_t start)
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_number_from_chunk(std::string_view chunk, std::size_t start)
     {
         std::int64_t val_i{};
         auto res_i = std::from_chars(chunk.data(), chunk.data() + chunk.size(), val_i);
@@ -343,21 +352,21 @@ namespace JSONpp
 
     }
 
-    template <typename StreamT>
-    bool Parser<StreamT>::is_whitespace(char ch) noexcept
+    template <typename StreamT, typename JsonType>
+    bool Parser<StreamT, JsonType>::is_whitespace(char ch) noexcept
     {
         return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
     }
 
-    template <typename StreamT>
-    void Parser<StreamT>::skip_whitespace() noexcept
+    template <typename StreamT, typename JsonType>
+    void Parser<StreamT, JsonType>::skip_whitespace() noexcept
     {
         while (is_whitespace(peek()))
             advance();
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_value()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_value()
     {
         // 调用该函数之前与之后均调用了 skip_whitespace()
         if (eof())
@@ -384,29 +393,29 @@ namespace JSONpp
         }
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_null()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_null()
     {
         parse_literal("null", 4);
-        return {null()};
+        return {null};
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_true()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_true()
     {
         parse_literal("true", 4);
-        return json(true);
+        return JsonType(true);
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_false()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_false()
     {
         parse_literal("false", 5);
-        return json(false);
+        return JsonType(false);
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_number()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_number()
     {
         auto is_num_char = [](char c) -> bool {
             return isdigit(static_cast<unsigned char>(c))
@@ -433,14 +442,14 @@ namespace JSONpp
 
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_string()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_string()
     {
-        return JSONStringParser<StreamT>(m_stream).parse();
+        return JSONStringParser<StreamT, JsonType>(m_stream).parse();
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_array()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_array()
     {
         array arr;
         auto start = tell_pos(); // 跳过左 [
@@ -474,8 +483,8 @@ namespace JSONpp
         return {arr};
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse_object()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse_object()
     {
         object obj;
         auto start = tell_pos(); // 跳过左 {
@@ -525,8 +534,8 @@ namespace JSONpp
         return {obj};
     }
 
-    template <typename StreamT>
-    json Parser<StreamT>::parse()
+    template <typename StreamT, typename JsonType>
+    JsonType Parser<StreamT, JsonType>::parse()
     {
         skip_whitespace();
         if (eof()) // doc 为空
@@ -545,6 +554,25 @@ namespace JSONpp
     /*
      * end JSON Parser
      */
+
+    /*
+     * Parse a document (string) to JsonType.
+     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
+     */
+    template <typename JsonType = json>
+    JsonType parse(std::string_view json_str)
+    {
+        StringViewStream stream(json_str);
+        return Parser<StringViewStream, JsonType>(stream).parse();
+    }
+
+    template <typename JsonType = json>
+    JsonType parse(std::istream& json_istream)
+    {
+        IStreamStream stream(json_istream);
+        return Parser<IStreamStream, JsonType>(stream).parse();
+    }
+
 }
 
 #endif //JSONPP_PARSER_H

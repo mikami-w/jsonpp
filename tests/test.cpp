@@ -75,6 +75,37 @@ namespace Test
         return entries;
     }
 
+    TestDirectoryEntries& getSortedJSONTestSuiteEntries()
+    {
+        static TestDirectoryEntries entries;
+        static bool initialized = false;
+        if (!initialized)
+        {
+            fs::directory_entry test_parsing("../tests/JSONTestSuite/test_parsing");
+            for (auto& file: fs::directory_iterator(test_parsing))
+            {
+                if (is_hidden(file)) continue;
+                if (file.path().filename().string() == "n_structure_100000_opening_arrays.json" ||
+                    file.path().filename().string() == "n_structure_open_array_object.json")
+                    continue; // These leads to stack overflow in our parser
+
+                entries["test_parsing"].push_back(file);
+            }
+            std::sort(entries["test_parsing"].begin(), entries["test_parsing"].end());
+
+            fs::directory_entry test_transform("../tests/JSONTestSuite/test_transform");
+            for (auto& file: fs::directory_iterator(test_transform))
+            {
+                if (is_hidden(file)) continue;
+                entries["test_transform"].push_back(file);
+            }
+            std::sort(entries["test_transform"].begin(), entries["test_transform"].end());
+
+            initialized = true;
+        }
+        return entries;
+    }
+
     std::string readFileToString(std::string const& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) {
@@ -110,17 +141,17 @@ namespace Test
         }
     };
 
-    void doTestFor(Testee const& t, std::ostream& logger = std::cout)
+    int doTestFor(Testee const& t, std::ostream& logger = std::cout)
     {
         logger << "\nTestee: " << t.getFileName() << std::endl;
-        logger << "Content:\n" << t.getString();
+        logger << "Content:\n" << t.getString() << std::endl;
 
         bool passed = true;
         try
         {
             auto js = JSONpp::parse(t.getString());
             logger << "Parsed JSON from string:\t" << js << std::endl;
-        } catch (std::runtime_error& e)
+        } catch (JSONpp::JSONParseError& e)
         {
             passed = false;
             ++result[SThrew];
@@ -146,7 +177,7 @@ namespace Test
                 ++result[Inequal];
                 logger << "Inequal JSONs parsed from string and istream in file " << t.getFileName() << std::endl;
             }
-        } catch (std::runtime_error& e)
+        } catch (JSONpp::JSONParseError& e)
         {
             passed = false;
             ++result[IThrew];
@@ -164,12 +195,14 @@ namespace Test
         {
             logger << "Test passed for file " << t.getFileName() << std::endl;
             ++result[Passed];
+            return 0;
         }
+        return 1;
     }
 
-    void testAll(std::ostream& logger = std::cout)
+    void testEntries(TestDirectoryEntries& entries, std::ostream& logger = std::cout)
     {
-        for (auto const& [dname, dirs] : getSortedDirectoryEntries())
+        for (auto const& [dname, dirs] : entries)
         {
             for (auto const& file : dirs)
             {
@@ -177,9 +210,9 @@ namespace Test
                 doTestFor(t, logger);
             }
         }
-        auto& dirs = getSortedDirectoryEntries();
+
         int total = 0;
-        for (auto const& [dname, dirs] : dirs)
+        for (auto const& [dname, dirs] : entries)
             total += dirs.size();
 
         logger << "\nAll tests finished." << std::endl;
@@ -190,6 +223,18 @@ namespace Test
         logger << "Inequal: " << result[Inequal] << std::endl;
         logger << "SFailed: " << result[SFailed] << std::endl;
         logger << "IFailed: " << result[IFailed] << std::endl;
+    }
+
+    void testAll(std::ostream& logger = std::cout)
+    {
+        auto& entries = getSortedDirectoryEntries();
+        testEntries(entries, logger);
+    }
+
+    void testJSONTestSuite(std::ostream& logger = std::cout)
+    {
+        auto& entries = getSortedJSONTestSuiteEntries();
+        testEntries(entries, logger);
     }
 
     void temp_test()
@@ -209,18 +254,26 @@ int main()
     using namespace Test;
     //std::cout << "JSONpp::isContiguousStream_v<JSONpp::StringViewStream>: " << JSONpp::traits::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
 
-    constexpr bool choice = 1;
-    if constexpr (choice)
+    constexpr int choice = 1;
+    switch (choice)
     {
-        std::ofstream logfile("/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log"
-           , std::ios::out | std::ios::trunc);
-        if (!logfile.is_open())
-            throw std::runtime_error("Could not open logfile");
-        testAll(logfile);
-    }
-    else
-    {
+    case 1:
+        {
+            std::ofstream logfile("/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log"
+              , std::ios::out | std::ios::trunc);
+            if (!logfile.is_open())
+                throw std::runtime_error("Could not open logfile");
+            // testAll(logfile);
+            testJSONTestSuite(logfile);
+        } break;
+    case 2:
+        {
+
+        } break;
+
+    default:
         temp_test();
+
     }
     return 0;
 }

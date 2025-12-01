@@ -5,7 +5,6 @@
 #include <array>
 #include <iostream>
 
-#include "jsonpp.hpp"
 
 namespace JSONpp
 {

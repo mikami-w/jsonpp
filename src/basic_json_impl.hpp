@@ -1,16 +1,15 @@
-#include "jsonpp.hpp"
+#ifndef JSONPP_BASIC_JSON_IMPL_HPP
+#define JSONPP_BASIC_JSON_IMPL_HPP
 
-#include <filesystem>
-#include <charconv>
-#include "stream_traits.hpp"
-#include "json_stream_adaptor.hpp"
-#include "serializer.hpp"
+#include "macro_def.hpp"
+#include "basic_json.hpp"
 
 namespace JSONpp
 {
     using namespace traits;
 
-    void json::dump(std::string& buffer) const
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::dump(std::string& buffer) const
     {
         std::visit(
             [&buffer](auto&& v)
@@ -18,8 +17,8 @@ namespace JSONpp
                 using T = std::decay_t<decltype(v)>;
 
                 if constexpr (std::is_same_v<T, std::monostate>)
-                    return; // empty json
-                if constexpr (std::is_same_v<T, null>)
+                    return; // empty basic_json
+                if constexpr (std::is_same_v<T, null_t>)
                     buffer.append("null", 4);
                 if constexpr (std::is_same_v<T, bool>)
                 {
@@ -94,16 +93,7 @@ namespace JSONpp
     /*
      * end asserted accessor
      */
-
-    json parse(std::string_view json_str)
-    {
-        StringViewStream stream(json_str);
-        return Parser<StringViewStream>(stream).parse();
-    }
-
-    json parse(std::istream& json_istream)
-    {
-        IStreamStream stream(json_istream);
-        return Parser<IStreamStream>(stream).parse();
-    }
 }
+
+
+#endif //JSONPP_BASIC_JSON_IMPL_HPP

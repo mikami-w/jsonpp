@@ -6,5 +6,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(JSONpp
         tests/test.cpp
-        src/jsonpp.cpp
 )

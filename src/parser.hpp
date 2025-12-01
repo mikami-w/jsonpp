@@ -486,7 +486,7 @@ namespace JSONpp
             auto key = parse_value();
 
             if (!key.is_string()) [[unlikely]]
-                throw JSONTypeError("Key of an object must be string");
+                throw JSONParseError("Key of an object must be string");
 
             skip_whitespace();
 

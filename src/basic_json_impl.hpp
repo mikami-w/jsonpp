@@ -35,7 +35,7 @@ namespace JSONpp
                 if constexpr (std::is_same_v<T, double>)
                 {
                     constexpr size_t MAX_DOUBLE_CHARS = 64;
-                    char cbuf[MAX_DOUBLE_CHARS]; // double 精度高时可能需要更多空间，建议给大一点
+                    char cbuf[MAX_DOUBLE_CHARS];
                     auto result = std::to_chars(cbuf, cbuf + sizeof(cbuf), v, std::chars_format::general);
                     buffer.append(cbuf, result.ptr - cbuf);
                 }

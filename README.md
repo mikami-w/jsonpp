@@ -240,7 +240,12 @@ j = object{{"k", "v"}};    // Assign object
 
 ## Exception Handling
 
-The library uses custom exceptions defined in `jsonexception.hpp`:
+The library uses custom exceptions defined in `jsonexception.hpp`.
+
+- `JSONpp::JSONParseError` - Thrown on parsing errors
+- `JSONpp::JSONTypeError` - Thrown on type mismatch during asserted access
+
+The library enforces strict exception types: parsing operations throw only `JSONParseError`, while type-checked accessors (e.g., as_string) throw only `JSONTypeError`.
 
 ```cpp
 #include "jsonpp.hpp"

@@ -240,7 +240,12 @@ j = object{{"k", "v"}};    // 赋值对象
 
 ## 异常处理
 
-该库使用在 `jsonexception.hpp` 中定义的自定义异常：
+该库使用在 `jsonexception.hpp` 中定义的自定义异常。
+
+- JSONpp::JSONParseError - 解析发生错误时抛出
+- JSONpp::JSONTypeError - 断言式访问发生类型不匹配时抛出
+
+本库执行严格的异常分类策略：解析操作仅会抛出`JSONParseError`，而带类型检查的访问器（例如 as_string）仅会抛出`JSONTypeError`。
 
 ```cpp
 #include "jsonpp.hpp"

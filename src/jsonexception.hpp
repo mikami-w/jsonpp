@@ -7,24 +7,31 @@ namespace JSONpp
     /*
      * JSON exceptions
      */
-    class JSONParseError : public std::runtime_error
+    class JsonException : public std::runtime_error
+    {
+    public:
+        JsonException(std::string const& msg):
+            std::runtime_error(msg) {}
+    };
+
+    class JsonParseError : public JsonException
     {
     public:
         static constexpr char const* UNPARSABLE_MESSAGE = "Unparsable character(s)";
         static constexpr char const* UNEXPECTED_EOF_MESSAGE = "Unexpected end of file while parsing JSON document";
 
-        JSONParseError(std::string const& msg):
-            std::runtime_error(msg) {}
+        JsonParseError(std::string const& msg):
+            JsonException(msg) {}
 
-        JSONParseError(std::string const& msg, std::size_t pos):
-            std::runtime_error(msg + " at position " + std::to_string(pos)) {}
+        JsonParseError(std::string const& msg, std::size_t pos):
+            JsonException(msg + " at position " + std::to_string(pos)) {}
     };
 
-    class JSONTypeError : public std::runtime_error
+    class JsonTypeError : public JsonException
     {
     public:
-        JSONTypeError(std::string const& msg) :
-            std::runtime_error(msg) {}
+        JsonTypeError(std::string const& msg) :
+            JsonException(msg) {}
     };
 
     /*

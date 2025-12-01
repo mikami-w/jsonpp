@@ -26,7 +26,7 @@ using ParserBase<StreamT>::read_chunk_until;
 #define JSONPP_CHECK_EOF_() \
 do { \
 if (eof()) \
-throw JSONParseError(JSONParseError::UNEXPECTED_EOF_MESSAGE); \
+throw JsonParseError(JsonParseError::UNEXPECTED_EOF_MESSAGE); \
 } while(0)
 
 namespace JSONpp
@@ -131,7 +131,7 @@ namespace JSONpp
                 type = UCPStatus::SINGLE;
             return {value, type};
         }
-        else throw JSONParseError("Invalid hexadecimal digits found in Unicode escape sequence", upos);
+        else throw JsonParseError("Invalid hexadecimal digits found in Unicode escape sequence", upos);
     }
 
     template <typename StreamT, typename JsonType>
@@ -199,22 +199,22 @@ namespace JSONpp
                     break;
                 case UCPStatus::HIGH:
                     {
-                        consume('\\', JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
-                        consume('u', JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
+                        consume('\\', JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
+                        consume('u', JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
                         auto [cp_low, type_low] = read_hex4(upos);
                         if (type_low != UCPStatus::LOW)
-                            throw JSONParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
+                            throw JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
 
                         append_utf8(get_codepoint(cp, cp_low));
                         break;
                     }
                 case UCPStatus::LOW:
-                    throw JSONParseError("Unexpected low surrogate without preceding high surrogate", upos);
+                    throw JsonParseError("Unexpected low surrogate without preceding high surrogate", upos);
                 }
                 break;
             }
         default:
-            throw JSONParseError("Invalid escape character", tell_pos());
+            throw JsonParseError("Invalid escape character", tell_pos());
         }
     }
 
@@ -255,7 +255,7 @@ namespace JSONpp
             }
             // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
             else if (ch < 0x20)
-                throw JSONParseError("Unescaped control character in string", tell_pos());
+                throw JsonParseError("Unescaped control character in string", tell_pos());
             else
             {
                 // 只有 IStreamStream 会在这里命中好字符, StringViewStream 已经在 chunk 中处理了它们
@@ -265,7 +265,7 @@ namespace JSONpp
         }
 
         if (eof())
-            throw JSONParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
+            throw JsonParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
 
         advance(); // 跳过右引号
         return std::move(result);
@@ -324,7 +324,7 @@ namespace JSONpp
         for (std::size_t i = 0; i < len; ++i)
         {
             if (advance() != lit[i])
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos() - 1);
+                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos() - 1);
         }
     }
 
@@ -346,9 +346,9 @@ namespace JSONpp
         }
 
         if (res_f.ec == std::errc::result_out_of_range)
-            throw JSONParseError("Number is out of range", start);
+            throw JsonParseError("Number is out of range", start);
         else
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, res_f.ptr - chunk.data());
+            throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, res_f.ptr - chunk.data());
 
     }
 
@@ -370,7 +370,7 @@ namespace JSONpp
     {
         // 调用该函数之前与之后均调用了 skip_whitespace()
         if (eof())
-            throw JSONParseError("Unexpected end of file");
+            throw JsonParseError("Unexpected end of file");
         char ch = peek();
         switch (ch)
         {
@@ -389,7 +389,7 @@ namespace JSONpp
         default:
             if ((ch >= '0' && ch <= '9') || ch == '-')
                 return parse_number();
-            throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
+            throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
         }
     }
 
@@ -466,19 +466,19 @@ namespace JSONpp
             else if (peek() != ',')
             {
                 JSONPP_CHECK_EOF_();
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
+                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
             }
             advance(); // 跳过 ','
 
             skip_whitespace();
 
             if (peek() == ']')
-                throw JSONParseError("Expected value after comma, but found ']' instead", tell_pos());
+                throw JsonParseError("Expected value after comma, but found ']' instead", tell_pos());
         }
         JSONPP_CHECK_EOF_();
 
         if (advance() != ']') // 跳过右 ]
-            throw JSONParseError("Cannot find the end of array, which start at position " + std::to_string(start));
+            throw JsonParseError("Cannot find the end of array, which start at position " + std::to_string(start));
 
         return {arr};
     }
@@ -495,14 +495,14 @@ namespace JSONpp
             auto key = parse_value();
 
             if (!key.is_string()) [[unlikely]]
-                throw JSONParseError("Key of an object must be string");
+                throw JsonParseError("Key of an object must be string");
 
             skip_whitespace();
 
             if (peek() != ':')
             {
                 JSONPP_CHECK_EOF_();
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
+                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
             }
             advance();
 
@@ -517,19 +517,19 @@ namespace JSONpp
             else if (peek() != ',')
             {
                 JSONPP_CHECK_EOF_();
-                throw JSONParseError(JSONParseError::UNPARSABLE_MESSAGE, tell_pos());
+                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
             }
             advance(); // skip comma
 
             skip_whitespace();
 
             if (peek() == '}')
-                throw JSONParseError("Expected value after comma, but found '}' instead", tell_pos());
+                throw JsonParseError("Expected value after comma, but found '}' instead", tell_pos());
         }
         JSONPP_CHECK_EOF_();
 
         if (advance() != '}')
-            throw JSONParseError("Cannot find the end of object, which start at position " + std::to_string(start));
+            throw JsonParseError("Cannot find the end of object, which start at position " + std::to_string(start));
 
         return {obj};
     }
@@ -547,7 +547,7 @@ namespace JSONpp
         if (eof()) // 表示恰好解析整个文档
             return val;
         else
-            throw JSONParseError("Unexpected character(s) after JSON value");
+            throw JsonParseError("Unexpected character(s) after JSON value");
 
         return {};
     }

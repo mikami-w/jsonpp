@@ -151,7 +151,7 @@ namespace Test
         {
             auto js = JSONpp::parse(t.getString());
             logger << "Parsed JSON from string:\t" << js << std::endl;
-        } catch (JSONpp::JSONParseError& e)
+        } catch (JSONpp::JsonParseError& e)
         {
             passed = false;
             ++result[SThrew];
@@ -177,7 +177,7 @@ namespace Test
                 ++result[Inequal];
                 logger << "Inequal JSONs parsed from string and istream in file " << t.getFileName() << std::endl;
             }
-        } catch (JSONpp::JSONParseError& e)
+        } catch (JSONpp::JsonParseError& e)
         {
             passed = false;
             ++result[IThrew];

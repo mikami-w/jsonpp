@@ -75,7 +75,7 @@ namespace JSONpp
             }
             catch (const std::bad_variant_access&)
             {
-                throw JSONTypeError(std::string("Value is not a ") + typeName);
+                throw JsonTypeError(std::string("Value is not a ") + typeName);
             }
         }
 
@@ -88,7 +88,7 @@ namespace JSONpp
             }
             catch (const std::bad_variant_access&)
             {
-                throw JSONTypeError(std::string("Value is not a ") + typeName);
+                throw JsonTypeError(std::string("Value is not a ") + typeName);
             }
         }
 

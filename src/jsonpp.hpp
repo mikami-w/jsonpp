@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "jsonpp.hpp"
+#include "serializer.hpp"
 
 namespace JSONpp
 {
@@ -155,13 +156,28 @@ namespace JSONpp
             return !(*this == other);
         }
 
-        // The stream itself has the function of adding \ (escaping) to characters that need to be escaped. This process occurs from memory to the stream.
-        friend std::ostream& operator<<(std::ostream& os, json const& val);
+        void dump(std::string& buffer) const;
 
-        std::string stringify() const;
+        // friend std::ostream& operator<<(std::ostream& os, json const& val);
 
+        std::string stringify() const
+        {
+            std::string buffer;
+            dump(buffer);
+            return buffer;
+        }
 
     }; // class json
+
+    // 若json模板化, 则需将第二参数改为basic_json<...>
+
+    // The stream itself has the function of adding \ (escaping) to characters that need to be escaped. This process occurs from memory to the stream.
+    inline std::ostream& operator<<(std::ostream& os, json const& val)
+    {
+        std::string buffer;
+        val.dump(buffer);
+        return os << buffer;
+    }
 
     /*
      * Parse a document (string) to json.

@@ -13,10 +13,6 @@ namespace JSONpp
         static constexpr char const* UNPARSABLE_MESSAGE = "Unparsable character(s)";
         static constexpr char const* UNEXPECTED_EOF_MESSAGE = "Unexpected end of file while parsing JSON document";
 
-        // template<typename... Args>
-        // JSONParseError(Args... messages):
-        //     std::runtime_error((std::string(messages) + ...)) {}
-
         JSONParseError(std::string const& msg):
             std::runtime_error(msg) {}
 
@@ -31,13 +27,6 @@ namespace JSONpp
             std::runtime_error(msg) {}
     };
 
-    class JSONEmptyDataError : public std::runtime_error
-    {
-    public:
-        static constexpr const char* EMPTY_DATA_MESSAGE = "json document is empty";
-        JSONEmptyDataError(std::string const& msg = EMPTY_DATA_MESSAGE) :
-            std::runtime_error(msg) {}
-    };
     /*
      * end JSON exceptions
      */

@@ -6,28 +6,9 @@
 #include "jsonexception.hpp"
 #include "basic_json.hpp"
 
-#include <exception>
 #include <string_view>
 #include <charconv>
 #include <cstddef>
-
-#define JSONPP_IMPORT_PARSERBASE_MEMBERS_ \
-using ParserBase<StreamT>::m_stream;        \
-using ParserBase<StreamT>::peek;            \
-using ParserBase<StreamT>::advance;         \
-using ParserBase<StreamT>::tell_pos;        \
-using ParserBase<StreamT>::eof;             \
-using ParserBase<StreamT>::consume;         \
-using ParserBase<StreamT>::size;            \
-using ParserBase<StreamT>::seek;            \
-using ParserBase<StreamT>::get_chunk;       \
-using ParserBase<StreamT>::read_chunk_until;
-
-#define JSONPP_CHECK_EOF_() \
-do { \
-if (eof()) \
-throw JsonParseError(JsonParseError::UNEXPECTED_EOF_MESSAGE); \
-} while(0)
 
 namespace JSONpp
 {
@@ -85,6 +66,7 @@ namespace JSONpp
 
     private:
         string result;
+        std::size_t start;
 
         enum class UCPStatus: std::uint8_t // Unicode Code Point Status
         {
@@ -105,7 +87,7 @@ namespace JSONpp
         void unescape_character();
 
     public:
-        JSONStringParser(StreamT& stream): ParserBase<StreamT>(stream), result() {}
+        JSONStringParser(StreamT& stream, std::size_t _start): ParserBase<StreamT>(stream), result(), start(_start) {}
         string parse();
 
     };
@@ -117,7 +99,7 @@ namespace JSONpp
         char num_buf[4];
         for (int i = 0; i < 4; ++i)
             num_buf[i] = advance();
-        JSONPP_CHECK_EOF_();
+        JSONPP_CHECK_EOF_("string", start);
 
         auto [ptr, ec] = std::from_chars(num_buf, num_buf + 4, value, 16);
         if (ec == std::errc() && ptr == num_buf + 4)
@@ -221,8 +203,7 @@ namespace JSONpp
     template <typename StreamT, typename JsonType>
     typename JSONStringParser<StreamT, JsonType>::string JSONStringParser<StreamT, JsonType>::parse()
     {
-        std::size_t const strBegin = tell_pos(); // 字符串起点, 跳过左引号
-        advance();
+        advance(); // 字符串起点, 跳过左引号
 
         if constexpr (isSizedStream_v<StreamT>)
         { // 如果能直接得到整个流的大小则直接预留空间
@@ -241,8 +222,9 @@ namespace JSONpp
 
                 if (!chunk.empty())
                     result.append(chunk);
-                // 下面检查为什么停下
+                JSONPP_CHECK_EOF_("string", start);
             }
+            // 下面检查为什么停下
 
             int ch = peek();
             if (ch == '\"')
@@ -263,9 +245,7 @@ namespace JSONpp
                 advance();
             }
         }
-
-        if (eof())
-            throw JsonParseError("Cannot find end of string, which start at position " + std::to_string(strBegin));
+        JSONPP_CHECK_EOF_("string", start);
 
         advance(); // 跳过右引号
         return std::move(result);
@@ -323,8 +303,7 @@ namespace JSONpp
     {
         for (std::size_t i = 0; i < len; ++i)
         {
-            if (advance() != lit[i])
-                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos() - 1);
+            consume(lit[i], JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos()));
         }
     }
 
@@ -445,7 +424,7 @@ namespace JSONpp
     template <typename StreamT, typename JsonType>
     JsonType Parser<StreamT, JsonType>::parse_string()
     {
-        return JSONStringParser<StreamT, JsonType>(m_stream).parse();
+        return JSONStringParser<StreamT, JsonType>(m_stream, tell_pos()).parse();
     }
 
     template <typename StreamT, typename JsonType>
@@ -465,7 +444,7 @@ namespace JSONpp
                 break;
             else if (peek() != ',')
             {
-                JSONPP_CHECK_EOF_();
+                JSONPP_CHECK_EOF_("array", start);
                 throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
             }
             advance(); // 跳过 ','
@@ -475,10 +454,9 @@ namespace JSONpp
             if (peek() == ']')
                 throw JsonParseError("Expected value after comma, but found ']' instead", tell_pos());
         }
-        JSONPP_CHECK_EOF_();
+        JSONPP_CHECK_EOF_("array", start);
 
-        if (advance() != ']') // 跳过右 ]
-            throw JsonParseError("Cannot find the end of array, which start at position " + std::to_string(start));
+        advance(); // 跳过右 ]
 
         return {arr};
     }
@@ -501,7 +479,7 @@ namespace JSONpp
 
             if (peek() != ':')
             {
-                JSONPP_CHECK_EOF_();
+                JSONPP_CHECK_EOF_("object", start);
                 throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
             }
             advance();
@@ -516,7 +494,7 @@ namespace JSONpp
                 break;
             else if (peek() != ',')
             {
-                JSONPP_CHECK_EOF_();
+                JSONPP_CHECK_EOF_("object", start);
                 throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
             }
             advance(); // skip comma
@@ -526,10 +504,9 @@ namespace JSONpp
             if (peek() == '}')
                 throw JsonParseError("Expected value after comma, but found '}' instead", tell_pos());
         }
-        JSONPP_CHECK_EOF_();
+        JSONPP_CHECK_EOF_("object", start);
 
-        if (advance() != '}')
-            throw JsonParseError("Cannot find the end of object, which start at position " + std::to_string(start));
+        advance(); // 跳过右 }
 
         return {obj};
     }

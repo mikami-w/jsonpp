@@ -1,7 +1,7 @@
 #ifndef JSONPP_MACRO_DEF_HPP
 #define JSONPP_MACRO_DEF_HPP
 
-#define MAX_NESTING_DEPTH 1024
+#define MAX_NESTING_DEPTH 1024  // Change this value as needed
 
 #define JSONPP_IMPORT_PARSERBASE_MEMBERS_ \
 using ParserBase<StreamT>::m_stream;        \

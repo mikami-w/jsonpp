@@ -27,7 +27,7 @@ namespace JSONpp
     constexpr null_t null = nullptr;
 
     BASIC_JSON_TEMPLATE
-    class basic_json : std::conditional_t<std::is_same_v<CustomBaseClass, void>, details::EmptyBaseClass, CustomBaseClass>
+    class basic_json : public std::conditional_t<std::is_same_v<CustomBaseClass, void>, details::EmptyBaseClass, CustomBaseClass>
     {
     public:
         using boolean = BooleanType;
@@ -48,16 +48,17 @@ namespace JSONpp
             object
         >;
 
-        using basic_json_t = BASIC_JSON_TYPE;
+        using json_type = BASIC_JSON_TYPE;
 
-        // 目前对用户自定义的number类型不支持
         template <typename T>
         constexpr static bool isJsonValueType =
             std::is_same_v<T, std::monostate> ||
             std::is_same_v<T, null_t> ||
             std::is_same_v<T, boolean> ||
             std::is_integral_v<T> ||
+            std::is_same_v<T, number_int> ||
             std::is_floating_point_v<T> ||
+            std::is_same_v<T, number_float> ||
             std::is_convertible_v<T, string> ||
             std::is_same_v<T, array> ||
             std::is_same_v<T, object>;
@@ -91,7 +92,6 @@ namespace JSONpp
             }
         }
 
-
     public:
         /*
          * constructors
@@ -105,10 +105,12 @@ namespace JSONpp
         template <typename T_Integer,
             std::enable_if_t<std::is_integral_v<T_Integer>, int> = 0>
         basic_json(T_Integer val): value(val) {}
+        basic_json(number_int val): value(val) {}
         // Constructor for floating-point types
         template <typename T_Float,
             std::enable_if_t<std::is_floating_point_v<T_Float>, int> = 0>
         basic_json(T_Float val): value(val) {}
+        basic_json(number_float val): value(val) {}
 
         basic_json(string val): value(std::move(val)) {}
         basic_json(char const* val): value(val) {}

@@ -1,9 +1,11 @@
 .idea
 .clang-tidy
 cmake-build-*
+build
 
 tests/*
 !tests/test.cpp
 !tests/.*
 
-DONOTADD/*
+DONOTADD
+.clang-tidy

@@ -41,7 +41,7 @@ namespace JSONpp
                 }
                 if constexpr (std::is_same_v<T, std::string>)
                 {
-                    escape_string(buffer, v);
+                    details::escape_string(buffer, v);
                 }
                 if constexpr (std::is_same_v<T, array>)
                 {

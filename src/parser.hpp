@@ -14,549 +14,556 @@ namespace JSONpp
 {
     using namespace traits;
 
-    /*
-     * ParserBase
-     */
-    template <typename StreamT>
-    class ParserBase
+    namespace details
     {
-        static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
-
-    protected:
-        StreamT& m_stream;
-
-    public:
-        int peek() const noexcept { return m_stream.peek(); }
-        int advance() noexcept { return m_stream.advance(); }
-        std::size_t tell_pos() const noexcept { return m_stream.tell_pos(); }
-        bool eof() const noexcept { return m_stream.eof(); }
-
-        template <typename ExceptionT>
-        void consume(char expected, ExceptionT const& e) { if (advance() == expected); else throw e; }
-
-        std::size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
-            else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
-
-        void seek(std::size_t step) { if constexpr (isSeekableStream_v<StreamT>) { m_stream.seek(step); }
-            else { static_assert(false, ".seek() was called, but the stream is not a Seekable Stream."); } }
-
-        std::string_view get_chunk(std::size_t begin, std::size_t length) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.get_chunk(begin, length); }
-            else { static_assert(false, ".get_chunk() was called, but the stream is not a Contiguous Stream."); } }
-
-        template <typename FunctorT>
-        std::string_view read_chunk_until(FunctorT predicate) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.read_chunk_until(predicate); }
-            else { static_assert(false, ".get_chunk_until() was called, but the stream is not a Contiguous Stream."); } }
-
-        explicit ParserBase(StreamT& stream): m_stream(stream) {}
-    };
-    /*
-     * end ParserBase
-     */
-
-    /*
-     * JSONStringParser
-     */
-    template <typename StreamT, typename JsonType>
-    class JSONStringParser : public ParserBase<StreamT>
-    {
-    protected:
-        JSONPP_IMPORT_PARSERBASE_MEMBERS_
-
-        using string = typename JsonType::string;
-
-    private:
-        string result;
-        std::size_t start;
-
-        enum class UCPStatus: std::uint8_t // Unicode Code Point Status
+        /*
+         * ParserBase
+         */
+        template <typename StreamT>
+        class ParserBase
         {
-            SINGLE,
-            HIGH,
-            LOW
+            static_assert(isJsonStream_v<StreamT>, "StreamT should be a JSON Stream.");
+
+        protected:
+            StreamT& m_stream;
+
+        public:
+            int peek() const noexcept { return m_stream.peek(); }
+            int advance() noexcept { return m_stream.advance(); }
+            std::size_t tell_pos() const noexcept { return m_stream.tell_pos(); }
+            bool eof() const noexcept { return m_stream.eof(); }
+
+            template <typename ExceptionT>
+            void consume(char expected, ExceptionT const& e) { if (advance() == expected); else throw e; }
+
+            std::size_t size() const { if constexpr (isSizedStream_v<StreamT>) { return m_stream.size(); }
+                else { static_assert(false, ".size() was called, but the stream is not a Sized Stream."); } }
+
+            void seek(std::size_t step) { if constexpr (isSeekableStream_v<StreamT>) { m_stream.seek(step); }
+                else { static_assert(false, ".seek() was called, but the stream is not a Seekable Stream."); } }
+
+            std::string_view get_chunk(std::size_t begin, std::size_t length) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.get_chunk(begin, length); }
+                else { static_assert(false, ".get_chunk() was called, but the stream is not a Contiguous Stream."); } }
+
+            template <typename FunctorT>
+            std::string_view read_chunk_until(FunctorT predicate) { if constexpr (isContiguousStream_v<StreamT>) { return m_stream.read_chunk_until(predicate); }
+                else { static_assert(false, ".get_chunk_until() was called, but the stream is not a Contiguous Stream."); } }
+
+            explicit ParserBase(StreamT& stream): m_stream(stream) {}
         };
+        /*
+         * end ParserBase
+         */
 
-        struct hex4_result
+        /*
+         * JSONStringParser
+         */
+        template <typename StreamT, typename JsonType>
+        class JSONStringParser : public ParserBase<StreamT>
         {
-            std::uint16_t value = 0;
-            UCPStatus type = UCPStatus::SINGLE;
-        };
+        protected:
+            JSONPP_IMPORT_PARSERBASE_MEMBERS_
 
-        hex4_result read_hex4(std::size_t upos);
-        void append_utf8(std::uint32_t codepoint);
-        static std::uint32_t get_codepoint(std::uint16_t high, std::uint16_t low);
-        void unescape_character();
+            using string = typename JsonType::string;
 
-    public:
-        JSONStringParser(StreamT& stream, std::size_t _start): ParserBase<StreamT>(stream), result(), start(_start) {}
-        string parse();
+        private:
+            string result;
+            std::size_t start;
 
-    };
-
-    template <typename StreamT, typename JsonType>
-    typename JSONStringParser<StreamT, JsonType>::hex4_result JSONStringParser<StreamT, JsonType>::read_hex4(std::size_t upos)
-    {
-        std::uint16_t value;
-        char num_buf[4];
-        for (int i = 0; i < 4; ++i)
-            num_buf[i] = advance();
-        JSONPP_CHECK_EOF_("string", start);
-
-        auto [ptr, ec] = std::from_chars(num_buf, num_buf + 4, value, 16);
-        if (ec == std::errc() && ptr == num_buf + 4)
-        {
-            UCPStatus type;
-            if (value >= 0xD800 && value <= 0xDBFF)
-                type = UCPStatus::HIGH;
-            else if (value >= 0xDC00 && value <= 0xDFFF)
-                type = UCPStatus::LOW;
-            else
-                type = UCPStatus::SINGLE;
-            return {value, type};
-        }
-        else throw JsonParseError("Invalid hexadecimal digits found in Unicode escape sequence", upos);
-    }
-
-    template <typename StreamT, typename JsonType>
-    void JSONStringParser<StreamT, JsonType>::append_utf8(std::uint32_t codepoint)
-    {
-        if (codepoint <= 0x7F)
-        {
-            // ASCII, 0b0xxxxxxx
-            result += static_cast<char>(codepoint);
-        }
-        else if (codepoint <= 0x7FF)
-        {
-            // 2-byte UTF-8, 0b110xxxxx 0b10xxxxxx
-            result += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
-            result += static_cast<char>(0x80 | (codepoint & 0x3F));
-        }
-        else if (codepoint <= 0xFFFF)
-        {
-            // 3-byte UTF-8, 0b1110xxxx 0b10xxxxxx 0b10xxxxxx
-            result += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
-            result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-            result += static_cast<char>(0x80 | (codepoint & 0x3F));
-        }
-        else if (codepoint <= 0x10FFFF)
-        {
-            // 4-byte UTF-8, 0b11110xxx 0b10xxxxxx 0b10xxxxxx 0b10xxxxxx
-            result += static_cast<char>(0xF0 | (codepoint >> 18));
-            result += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
-            result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-            result += static_cast<char>(0x80 | (codepoint & 0x3F));
-        }
-    }
-
-    template <typename StreamT, typename JsonType>
-    std::uint32_t JSONStringParser<StreamT, JsonType>::get_codepoint(std::uint16_t high, std::uint16_t low)
-    {
-        return
-            0x10000 | (((std::uint32_t)high & 0x03FF) << 10) | ((std::uint32_t)low & 0x03FF);
-    }
-
-    template <typename StreamT, typename JsonType>
-    void JSONStringParser<StreamT, JsonType>::unescape_character()
-    {
-        switch (peek())
-        {
-        case '\"': result += '\"'; advance(); break;
-        case '\\': result += '\\'; advance(); break;
-        case '/': result += '/'; advance(); break;
-        case 'b': result += '\b'; advance(); break;
-        case 'f': result += '\f'; advance(); break;
-        case 'n': result += '\n'; advance(); break;
-        case 'r': result += '\r'; advance(); break;
-        case 't': result += '\t'; advance(); break;
-        case 'u':
+            enum class UCPStatus: std::uint8_t // Unicode Code Point Status
             {
-                auto upos = tell_pos();
-                advance();
+                SINGLE,
+                HIGH,
+                LOW
+            };
 
-                auto [cp, type] = read_hex4(upos);
+            struct hex4_result
+            {
+                std::uint16_t value = 0;
+                UCPStatus type = UCPStatus::SINGLE;
+            };
 
-                switch (type)
-                {
-                case UCPStatus::SINGLE:
-                    append_utf8(cp);
-                    break;
-                case UCPStatus::HIGH:
-                    {
-                        consume('\\', JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
-                        consume('u', JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
-                        auto [cp_low, type_low] = read_hex4(upos);
-                        if (type_low != UCPStatus::LOW)
-                            throw JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
+            hex4_result read_hex4(std::size_t upos);
+            void append_utf8(std::uint32_t codepoint);
+            static std::uint32_t get_codepoint(std::uint16_t high, std::uint16_t low);
+            void unescape_character();
 
-                        append_utf8(get_codepoint(cp, cp_low));
-                        break;
-                    }
-                case UCPStatus::LOW:
-                    throw JsonParseError("Unexpected low surrogate without preceding high surrogate", upos);
-                }
-                break;
-            }
-        default:
-            throw JsonParseError("Invalid escape character", tell_pos());
-        }
-    }
+        public:
+            JSONStringParser(StreamT& stream, std::size_t _start): ParserBase<StreamT>(stream), result(), start(_start) {}
+            string parse();
 
-    template <typename StreamT, typename JsonType>
-    typename JSONStringParser<StreamT, JsonType>::string JSONStringParser<StreamT, JsonType>::parse()
-    {
-        advance(); // 字符串起点, 跳过左引号
+        };
 
-        if constexpr (isSizedStream_v<StreamT>)
-        { // 如果能直接得到整个流的大小则直接预留空间
-            result.reserve(size());
-        }
-
-        // TODO: 顺序流parse代码待测试(后者逐字符)
-        while (!eof())
+        template <typename StreamT, typename JsonType>
+        typename JSONStringParser<StreamT, JsonType>::hex4_result JSONStringParser<StreamT, JsonType>::read_hex4(std::size_t upos)
         {
+            std::uint16_t value;
+            char num_buf[4];
+            for (int i = 0; i < 4; ++i)
+                num_buf[i] = advance();
+            JSONPP_CHECK_EOF_("string", start);
+
+            auto [ptr, ec] = std::from_chars(num_buf, num_buf + 4, value, 16);
+            if (ec == std::errc() && ptr == num_buf + 4)
+            {
+                UCPStatus type;
+                if (value >= 0xD800 && value <= 0xDBFF)
+                    type = UCPStatus::HIGH;
+                else if (value >= 0xDC00 && value <= 0xDFFF)
+                    type = UCPStatus::LOW;
+                else
+                    type = UCPStatus::SINGLE;
+                return {value, type};
+            }
+            else throw JsonParseError("Invalid hexadecimal digits found in Unicode escape sequence", upos);
+        }
+
+        template <typename StreamT, typename JsonType>
+        void JSONStringParser<StreamT, JsonType>::append_utf8(std::uint32_t codepoint)
+        {
+            if (codepoint <= 0x7F)
+            {
+                // ASCII, 0b0xxxxxxx
+                result += static_cast<char>(codepoint);
+            }
+            else if (codepoint <= 0x7FF)
+            {
+                // 2-byte UTF-8, 0b110xxxxx 0b10xxxxxx
+                result += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+            }
+            else if (codepoint <= 0xFFFF)
+            {
+                // 3-byte UTF-8, 0b1110xxxx 0b10xxxxxx 0b10xxxxxx
+                result += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+                result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+            }
+            else if (codepoint <= 0x10FFFF)
+            {
+                // 4-byte UTF-8, 0b11110xxx 0b10xxxxxx 0b10xxxxxx 0b10xxxxxx
+                result += static_cast<char>(0xF0 | (codepoint >> 18));
+                result += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+                result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+            }
+        }
+
+        template <typename StreamT, typename JsonType>
+        std::uint32_t JSONStringParser<StreamT, JsonType>::get_codepoint(std::uint16_t high, std::uint16_t low)
+        {
+            return
+                0x10000 | (((std::uint32_t)high & 0x03FF) << 10) | ((std::uint32_t)low & 0x03FF);
+        }
+
+        template <typename StreamT, typename JsonType>
+        void JSONStringParser<StreamT, JsonType>::unescape_character()
+        {
+            switch (peek())
+            {
+            case '\"': result += '\"'; advance(); break;
+            case '\\': result += '\\'; advance(); break;
+            case '/': result += '/'; advance(); break;
+            case 'b': result += '\b'; advance(); break;
+            case 'f': result += '\f'; advance(); break;
+            case 'n': result += '\n'; advance(); break;
+            case 'r': result += '\r'; advance(); break;
+            case 't': result += '\t'; advance(); break;
+            case 'u':
+                {
+                    auto upos = tell_pos();
+                    advance();
+
+                    auto [cp, type] = read_hex4(upos);
+
+                    switch (type)
+                    {
+                    case UCPStatus::SINGLE:
+                        append_utf8(cp);
+                        break;
+                    case UCPStatus::HIGH:
+                        {
+                            consume('\\', JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
+                            consume('u', JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos()));
+                            auto [cp_low, type_low] = read_hex4(upos);
+                            if (type_low != UCPStatus::LOW)
+                                throw JsonParseError("Expected low surrogate after high surrogate in Unicode escape sequence", tell_pos());
+
+                            append_utf8(get_codepoint(cp, cp_low));
+                            break;
+                        }
+                    case UCPStatus::LOW:
+                        throw JsonParseError("Unexpected low surrogate without preceding high surrogate", upos);
+                    }
+                    break;
+                }
+            default:
+                throw JsonParseError("Invalid escape character", tell_pos());
+            }
+        }
+
+        template <typename StreamT, typename JsonType>
+        typename JSONStringParser<StreamT, JsonType>::string JSONStringParser<StreamT, JsonType>::parse()
+        {
+            advance(); // 字符串起点, 跳过左引号
+
+            if constexpr (isSizedStream_v<StreamT>)
+            { // 如果能直接得到整个流的大小则直接预留空间
+                result.reserve(size());
+            }
+
+            // TODO: 顺序流parse代码待测试(后者逐字符)
+            while (!eof())
+            {
+                if constexpr (isContiguousStream_v<StreamT>)
+                {
+                    std::string_view chunk = read_chunk_until([](char c)
+                    { // 需要终止搜索的字符
+                        return c == '\\' || c == '\"' || static_cast<unsigned char>(c) < 0x20;
+                    });
+
+                    if (!chunk.empty())
+                        result.append(chunk);
+                    JSONPP_CHECK_EOF_("string", start);
+                }
+                // 下面检查为什么停下
+
+                int ch = peek();
+                if (ch == '\"')
+                    break;
+
+                if (ch == '\\')
+                {
+                    advance();
+                    unescape_character();
+                }
+                // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
+                else if (ch < 0x20)
+                    throw JsonParseError("Unescaped control character in string", tell_pos());
+                else
+                {
+                    // 只有 IStreamStream 会在这里命中好字符, StringViewStream 已经在 chunk 中处理了它们
+                    result += ch;
+                    advance();
+                }
+            }
+            JSONPP_CHECK_EOF_("string", start);
+
+            advance(); // 跳过右引号
+            return std::move(result);
+        }
+        /*
+         * end JSONStringParser
+         */
+
+        /*
+         * JSON Parser
+         */
+        template <typename StreamT, typename JsonType>
+        class Parser : public ParserBase<StreamT>
+        {
+        protected:
+            JSONPP_IMPORT_PARSERBASE_MEMBERS_
+
+            using boolean = typename JsonType::boolean;
+            using number_int = typename JsonType::number_int;
+            using number_float = typename JsonType::number_float;
+            using string = typename JsonType::string;
+            using array = typename JsonType::array;
+            using object = typename JsonType::object;
+
+        private:
+            int nesting_depth;
+
+            static bool is_whitespace(char ch) noexcept;
+
+            void skip_whitespace() noexcept; // 跳过从 pos 开始的空白字符, 使 pos 指向调用函数后的第一个非空白字符
+
+            void parse_literal(char const* lit, std::size_t len);
+
+            static JsonType parse_number_from_chunk(std::string_view chunk, std::size_t start);
+
+            JsonType parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 basic_json, 使 pos 指向被解析的 basic_json 后的第一个字节
+
+            JsonType parse_null();
+            JsonType parse_true();
+            JsonType parse_false();
+            JsonType parse_number();
+            JsonType parse_string();
+            JsonType parse_array();
+            JsonType parse_object();
+
+        public:
+            Parser() = delete;
+
+            explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream), nesting_depth(0) {}
+
+            JsonType parse();
+        };
+
+        template <typename StreamT, typename JsonType>
+        void Parser<StreamT, JsonType>::parse_literal(char const* lit, std::size_t len)
+        {
+            for (std::size_t i = 0; i < len; ++i)
+            {
+                consume(lit[i], JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos()));
+            }
+        }
+
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_number_from_chunk(std::string_view chunk, std::size_t start)
+        {
+            std::int64_t val_i{};
+            auto res_i = std::from_chars(chunk.data(), chunk.data() + chunk.size(), val_i);
+            if (res_i.ptr == chunk.data() + chunk.size() && res_i.ec == std::errc()) // 成功
+            {
+                return {val_i};
+            }
+
+            double val_f{};
+            auto res_f = std::from_chars(chunk.data(), chunk.data() + chunk.size(), val_f);
+            if (res_f.ptr == chunk.data() + chunk.size() && res_f.ec == std::errc()) // 成功
+            {
+                return {val_f};
+            }
+
+            if (res_f.ec == std::errc::result_out_of_range)
+                throw JsonParseError("Number is out of range", start);
+            else
+                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, res_f.ptr - chunk.data());
+
+        }
+
+        template <typename StreamT, typename JsonType>
+        bool Parser<StreamT, JsonType>::is_whitespace(char ch) noexcept
+        {
+            return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
+        }
+
+        template <typename StreamT, typename JsonType>
+        void Parser<StreamT, JsonType>::skip_whitespace() noexcept
+        {
+            while (is_whitespace(peek()))
+                advance();
+        }
+
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_value()
+        {
+            // 调用该函数之前与之后均调用了 skip_whitespace()
+            if (eof())
+                throw JsonParseError("Unexpected end of file");
+            char ch = peek();
+            switch (ch)
+            {
+            case 'n':
+                return parse_null();
+            case 't':
+                return parse_true();
+            case 'f':
+                return parse_false();
+            case '\"':
+                return parse_string();
+            case '[':
+                return parse_array();
+            case '{':
+                return parse_object();
+            default:
+                if ((ch >= '0' && ch <= '9') || ch == '-')
+                    return parse_number();
+                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
+            }
+        }
+
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_null()
+        {
+            parse_literal("null", 4);
+            return {null};
+        }
+
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_true()
+        {
+            parse_literal("true", 4);
+            return JsonType(true);
+        }
+
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_false()
+        {
+            parse_literal("false", 5);
+            return JsonType(false);
+        }
+
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_number()
+        {
+            auto is_num_char = [](char c) -> bool {
+                return isdigit(static_cast<unsigned char>(c))
+                    || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E';
+            };
+
+            std::size_t start = tell_pos();
+
             if constexpr (isContiguousStream_v<StreamT>)
             {
-                std::string_view chunk = read_chunk_until([](char c)
-                { // 需要终止搜索的字符
-                    return c == '\\' || c == '\"' || static_cast<unsigned char>(c) < 0x20;
-                });
-
-                if (!chunk.empty())
-                    result.append(chunk);
-                JSONPP_CHECK_EOF_("string", start);
+                while (is_num_char(peek()))
+                    advance();
+                return parse_number_from_chunk(get_chunk(start, tell_pos() - start), start);
             }
-            // 下面检查为什么停下
-
-            int ch = peek();
-            if (ch == '\"')
-                break;
-
-            if (ch == '\\')
-            {
-                advance();
-                unescape_character();
-            }
-            // JSON 规范 (RFC 8259) 禁止未转义的控制字符 (U+0000 到 U+001F)
-            else if (ch < 0x20)
-                throw JsonParseError("Unescaped control character in string", tell_pos());
             else
             {
-                // 只有 IStreamStream 会在这里命中好字符, StringViewStream 已经在 chunk 中处理了它们
-                result += ch;
-                advance();
+                std::string chunk;
+                while (is_num_char(peek()))
+                {
+                    chunk += advance(); // 停在第 1 个不可能是数字字符的位置
+                }
+                return parse_number_from_chunk(chunk, start);
             }
+
         }
-        JSONPP_CHECK_EOF_("string", start);
 
-        advance(); // 跳过右引号
-        return std::move(result);
-    }
-    /*
-     * end JSONStringParser
-     */
-
-    /*
-     * JSON Parser
-     */
-    template <typename StreamT, typename JsonType>
-    class Parser : public ParserBase<StreamT>
-    {
-    protected:
-        JSONPP_IMPORT_PARSERBASE_MEMBERS_
-
-        using boolean = typename JsonType::boolean;
-        using number_int = typename JsonType::number_int;
-        using number_float = typename JsonType::number_float;
-        using string = typename JsonType::string;
-        using array = typename JsonType::array;
-        using object = typename JsonType::object;
-
-    private:
-        int nesting_depth;
-
-        static bool is_whitespace(char ch) noexcept;
-
-        void skip_whitespace() noexcept; // 跳过从 pos 开始的空白字符, 使 pos 指向调用函数后的第一个非空白字符
-
-        void parse_literal(char const* lit, std::size_t len);
-
-        static JsonType parse_number_from_chunk(std::string_view chunk, std::size_t start);
-
-        JsonType parse_value(); // 解析, 返回并跳过从当前 pos 开始的一个 basic_json, 使 pos 指向被解析的 basic_json 后的第一个字节
-
-        JsonType parse_null();
-        JsonType parse_true();
-        JsonType parse_false();
-        JsonType parse_number();
-        JsonType parse_string();
-        JsonType parse_array();
-        JsonType parse_object();
-
-    public:
-        Parser() = delete;
-
-        explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream), nesting_depth(0) {}
-
-        JsonType parse();
-    };
-
-    template <typename StreamT, typename JsonType>
-    void Parser<StreamT, JsonType>::parse_literal(char const* lit, std::size_t len)
-    {
-        for (std::size_t i = 0; i < len; ++i)
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_string()
         {
-            consume(lit[i], JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos()));
+            return JSONStringParser<StreamT, JsonType>(m_stream, tell_pos()).parse();
         }
-    }
 
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_number_from_chunk(std::string_view chunk, std::size_t start)
-    {
-        std::int64_t val_i{};
-        auto res_i = std::from_chars(chunk.data(), chunk.data() + chunk.size(), val_i);
-        if (res_i.ptr == chunk.data() + chunk.size() && res_i.ec == std::errc()) // 成功
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_array()
         {
-            return {val_i};
-        }
+            // Increase nesting depth counter and check limit
+            if (++nesting_depth > MAX_NESTING_DEPTH)
+                throw JsonDepthLimitExceeded(tell_pos());
 
-        double val_f{};
-        auto res_f = std::from_chars(chunk.data(), chunk.data() + chunk.size(), val_f);
-        if (res_f.ptr == chunk.data() + chunk.size() && res_f.ec == std::errc()) // 成功
-        {
-            return {val_f};
-        }
-
-        if (res_f.ec == std::errc::result_out_of_range)
-            throw JsonParseError("Number is out of range", start);
-        else
-            throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, res_f.ptr - chunk.data());
-
-    }
-
-    template <typename StreamT, typename JsonType>
-    bool Parser<StreamT, JsonType>::is_whitespace(char ch) noexcept
-    {
-        return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
-    }
-
-    template <typename StreamT, typename JsonType>
-    void Parser<StreamT, JsonType>::skip_whitespace() noexcept
-    {
-        while (is_whitespace(peek()))
+            array arr;
+            auto start = tell_pos(); // 跳过左 [
             advance();
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_value()
-    {
-        // 调用该函数之前与之后均调用了 skip_whitespace()
-        if (eof())
-            throw JsonParseError("Unexpected end of file");
-        char ch = peek();
-        switch (ch)
-        {
-        case 'n':
-            return parse_null();
-        case 't':
-            return parse_true();
-        case 'f':
-            return parse_false();
-        case '\"':
-            return parse_string();
-        case '[':
-            return parse_array();
-        case '{':
-            return parse_object();
-        default:
-            if ((ch >= '0' && ch <= '9') || ch == '-')
-                return parse_number();
-            throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
-        }
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_null()
-    {
-        parse_literal("null", 4);
-        return {null};
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_true()
-    {
-        parse_literal("true", 4);
-        return JsonType(true);
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_false()
-    {
-        parse_literal("false", 5);
-        return JsonType(false);
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_number()
-    {
-        auto is_num_char = [](char c) -> bool {
-            return isdigit(static_cast<unsigned char>(c))
-                || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E';
-        };
-
-        std::size_t start = tell_pos();
-
-        if constexpr (isContiguousStream_v<StreamT>)
-        {
-            while (is_num_char(peek()))
-                advance();
-            return parse_number_from_chunk(get_chunk(start, tell_pos() - start), start);
-        }
-        else
-        {
-            std::string chunk;
-            while (is_num_char(peek()))
-            {
-                chunk += advance(); // 停在第 1 个不可能是数字字符的位置
-            }
-            return parse_number_from_chunk(chunk, start);
-        }
-
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_string()
-    {
-        return JSONStringParser<StreamT, JsonType>(m_stream, tell_pos()).parse();
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_array()
-    {
-        // Increase nesting depth counter and check limit
-        if (++nesting_depth > MAX_NESTING_DEPTH)
-            throw JsonDepthLimitExceeded(tell_pos());
-
-        array arr;
-        auto start = tell_pos(); // 跳过左 [
-        advance();
-        skip_whitespace();
-        while (!eof() && peek() != ']')
-        {
-            arr.push_back(parse_value());
             skip_whitespace();
-
-            // json数组中对象以外的字符只能是空白字符或'['或']'或','
-            if (peek() == ']')
-                break;
-            else if (peek() != ',')
+            while (!eof() && peek() != ']')
             {
-                JSONPP_CHECK_EOF_("array", start);
-                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
+                arr.push_back(parse_value());
+                skip_whitespace();
+
+                // json数组中对象以外的字符只能是空白字符或'['或']'或','
+                if (peek() == ']')
+                    break;
+                else if (peek() != ',')
+                {
+                    JSONPP_CHECK_EOF_("array", start);
+                    throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
+                }
+                advance(); // 跳过 ','
+
+                skip_whitespace();
+
+                if (peek() == ']')
+                    throw JsonParseError("Expected value after comma, but found ']' instead", tell_pos());
             }
-            advance(); // 跳过 ','
+            JSONPP_CHECK_EOF_("array", start);
 
-            skip_whitespace();
-
-            if (peek() == ']')
-                throw JsonParseError("Expected value after comma, but found ']' instead", tell_pos());
+            advance(); // 跳过右 ]
+            --nesting_depth; // Decrease nesting depth counter before returning
+            return {arr};
         }
-        JSONPP_CHECK_EOF_("array", start);
 
-        advance(); // 跳过右 ]
-        --nesting_depth; // Decrease nesting depth counter before returning
-        return {arr};
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse_object()
-    {
-        // Increase nesting depth counter and check limit
-        if (++nesting_depth > MAX_NESTING_DEPTH)
-            throw JsonDepthLimitExceeded(tell_pos());
-
-        object obj;
-        auto start = tell_pos(); // 跳过左 {
-        advance();
-        skip_whitespace();
-        while (!eof() && peek() != '}')
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse_object()
         {
-            auto key = parse_value();
+            // Increase nesting depth counter and check limit
+            if (++nesting_depth > MAX_NESTING_DEPTH)
+                throw JsonDepthLimitExceeded(tell_pos());
 
-            if (!key.is_string()) [[unlikely]]
-                throw JsonParseError("Key of an object must be string");
-
-            skip_whitespace();
-
-            if (peek() != ':')
-            {
-                JSONPP_CHECK_EOF_("object", start);
-                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
-            }
+            object obj;
+            auto start = tell_pos(); // 跳过左 {
             advance();
-
             skip_whitespace();
+            while (!eof() && peek() != '}')
+            {
+                auto key = parse_value();
+
+                if (!key.is_string()) [[unlikely]]
+                    throw JsonParseError("Key of an object must be string");
+
+                skip_whitespace();
+
+                if (peek() != ':')
+                {
+                    JSONPP_CHECK_EOF_("object", start);
+                    throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
+                }
+                advance();
+
+                skip_whitespace();
+                auto val = parse_value();
+                obj[key.as_string()] = val;
+
+                skip_whitespace();
+
+                if (peek() == '}')
+                    break;
+                else if (peek() != ',')
+                {
+                    JSONPP_CHECK_EOF_("object", start);
+                    throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
+                }
+                advance(); // skip comma
+
+                skip_whitespace();
+
+                if (peek() == '}')
+                    throw JsonParseError("Expected value after comma, but found '}' instead", tell_pos());
+            }
+            JSONPP_CHECK_EOF_("object", start);
+
+            advance(); // 跳过右 }
+            --nesting_depth; // Decrease nesting depth counter before returning
+            return {obj};
+        }
+
+        template <typename StreamT, typename JsonType>
+        JsonType Parser<StreamT, JsonType>::parse()
+        {
+            skip_whitespace();
+            if (eof()) // doc 为空
+                return {};
+
             auto val = parse_value();
-            obj[key.as_string()] = val;
-
             skip_whitespace();
 
-            if (peek() == '}')
-                break;
-            else if (peek() != ',')
-            {
-                JSONPP_CHECK_EOF_("object", start);
-                throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
-            }
-            advance(); // skip comma
+            if (eof()) // 表示恰好解析整个文档
+                return val;
+            else
+                throw JsonParseError("Unexpected character(s) after JSON value");
 
-            skip_whitespace();
-
-            if (peek() == '}')
-                throw JsonParseError("Expected value after comma, but found '}' instead", tell_pos());
-        }
-        JSONPP_CHECK_EOF_("object", start);
-
-        advance(); // 跳过右 }
-        --nesting_depth; // Decrease nesting depth counter before returning
-        return {obj};
-    }
-
-    template <typename StreamT, typename JsonType>
-    JsonType Parser<StreamT, JsonType>::parse()
-    {
-        skip_whitespace();
-        if (eof()) // doc 为空
             return {};
-
-        auto val = parse_value();
-        skip_whitespace();
-
-        if (eof()) // 表示恰好解析整个文档
-            return val;
-        else
-            throw JsonParseError("Unexpected character(s) after JSON value");
-
-        return {};
+        }
+        /*
+         * end JSON Parser
+         */
     }
-    /*
-     * end JSON Parser
-     */
 
     /*
-     * Parse a document (string) to JsonType.
+     * Parse a document to JsonType, accessing data with std::string_view.
      * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
      */
     template <typename JsonType = json>
     JsonType parse(std::string_view json_str)
     {
-        StringViewStream stream(json_str);
-        return Parser<StringViewStream, JsonType>(stream).parse();
+        details::StringViewStream stream(json_str);
+        return details::Parser<details::StringViewStream, JsonType>(stream).parse();
     }
 
+    /*
+     * Parse a document to JsonType, accessing data with std::istream.
+     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
+     */
     template <typename JsonType = json>
     JsonType parse(std::istream& json_istream)
     {
-        IStreamStream stream(json_istream);
-        return Parser<IStreamStream, JsonType>(stream).parse();
+        details::IStreamStream stream(json_istream);
+        return details::Parser<details::IStreamStream, JsonType>(stream).parse();
     }
 
 }

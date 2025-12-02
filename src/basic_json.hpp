@@ -219,8 +219,6 @@ namespace JSONpp
 
     }; // class basic_json
 
-    // 若json模板化, 则需将第二参数改为basic_json<...>
-
     // The stream itself has the function of adding \ (escaping) to characters that need to be escaped. This process occurs from memory to the stream.
     BASIC_JSON_TEMPLATE
     std::ostream& operator<<(std::ostream& os, BASIC_JSON_TYPE const& val)

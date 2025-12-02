@@ -6,7 +6,7 @@
 
 namespace JSONpp::traits
 {
-    namespace _details
+    namespace details_t
     {
         template <typename T, typename = void>
         struct isJsonStreamImpl: std::false_type {};
@@ -41,7 +41,7 @@ namespace JSONpp::traits
     }
 
     template <typename T>
-    struct isJsonStream: _details::isJsonStreamImpl<T> {};
+    struct isJsonStream: details_t::isJsonStreamImpl<T> {};
 
     template <typename T>
     inline constexpr bool isJsonStream_v = isJsonStream<T>::value;
@@ -81,7 +81,7 @@ namespace JSONpp::traits
         std::enable_if_t<isSeekableStream_v<T>,
         std::void_t<
             decltype(std::declval<T>().get_chunk(std::size_t(), std::size_t())),
-            decltype(std::declval<T&>().read_chunk_until(std::declval<_details::PredicateFunctor>()))
+            decltype(std::declval<T&>().read_chunk_until(std::declval<details_t::PredicateFunctor>()))
     >>>
         : std::true_type {};
 

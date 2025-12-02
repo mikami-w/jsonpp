@@ -8,6 +8,77 @@ namespace JSONpp
 {
     using namespace traits;
 
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::size_t index)
+    {
+        auto& arr = as_array();
+        assert(index < arr.size() && "JSON array index out of range");
+        return arr[index];
+    }
+
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::operator[](std::size_t index) const
+    {
+        auto const& arr = as_array();
+        assert(index < arr.size() && "JSON array index out of range");
+        return arr[index];
+    }
+
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::at(std::size_t index)
+    {
+        auto& arr = as_array();
+        if (index >= arr.size())
+            throw JsonTypeError("JSON array index out of range");
+        return arr[index];
+    }
+
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::at(std::size_t index) const
+    {
+        auto const& arr = as_array();
+        if (index >= arr.size())
+            throw JsonTypeError("JSON array index out of range");
+        return arr[index];
+    }
+
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::operator[](std::string const& key) const
+    {
+        auto const& obj = as_object();
+        auto it = obj.find(key);
+        if (it == obj.end())
+            throw JsonTypeError("Key \"" + key + "\" not found in JSON object");
+        return it->second;
+    }
+
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::at(std::string const& key)
+    {
+        auto& obj = as_object();
+        auto it = obj.find(key);
+        if (it == obj.end())
+            throw JsonTypeError("Key \"" + key + "\" not found in JSON object");
+        return it->second;
+    }
+
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::at(std::string const& key) const
+    {
+        auto const& obj = as_object();
+        auto it = obj.find(key);
+        if (it == obj.end())
+            throw JsonTypeError("Key \"" + key + "\" not found in JSON object");
+        return it->second;
+    }
+
+    BASIC_JSON_TEMPLATE
+    bool BASIC_JSON_TYPE::operator==(BASIC_JSON_TYPE const& other) const
+    {
+        if (value.index() != other.value.index()) return false;
+        return value == other.value;
+    }
+
     /*
      * Parse a document to JsonType, accessing data with std::string_view.
      */

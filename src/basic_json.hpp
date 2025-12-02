@@ -185,23 +185,22 @@ namespace JSONpp
         /*
          * accessors for array and object
          */
-        basic_json& operator[](std::size_t index) { return as_array()[index]; }
-        const basic_json& operator[](std::size_t index) const { return as_array()[index]; }
+        basic_json& operator[](std::size_t index);
+        basic_json const& operator[](std::size_t index) const;
+        basic_json& at(std::size_t);
+        basic_json const& at(std::size_t) const;
 
         basic_json& operator[](std::string const& key) { return as_object()[key]; }
-        const basic_json& operator[](std::string const& key) const { return as_object().at(key); }
+        basic_json const& operator[](std::string const& key) const;
+        basic_json& at(std::string const& key);
+        basic_json const& at(std::string const& key) const;
+
         /*
          * end accessors for array and object
          */
 
-        bool operator==(basic_json const& other) const {
-            if (value.index() != other.value.index()) return false;
-            return value == other.value;
-        }
-
-        bool operator!=(basic_json const& other) const {
-            return !(*this == other);
-        }
+        bool operator==(basic_json const& other) const;
+        bool operator!=(basic_json const& other) const { return !(*this == other); }
 
         static basic_json parse(std::string_view json_doc);
         static basic_json parse(std::istream& json_istream);

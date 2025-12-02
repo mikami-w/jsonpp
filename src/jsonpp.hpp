@@ -6,5 +6,6 @@
 #include "parser.hpp"
 #include "basic_json_impl.hpp"
 #include "jsonexception.hpp"
+#include "traits.hpp"
 
 #endif //JSONPP_JSONPP_HPP

@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <algorithm>
 #include <cassert>
-#include <type_traits>
 #include <string_view>
 
 namespace JSONpp

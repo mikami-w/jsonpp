@@ -1,7 +1,8 @@
 #ifndef JSONPP_JSONEXCEPTION_HPP
 #define JSONPP_JSONEXCEPTION_HPP
-#include <stdexcept>
+
 #include "macro_def.hpp"
+#include <stdexcept>
 
 namespace JSONpp
 {

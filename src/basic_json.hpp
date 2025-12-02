@@ -7,11 +7,8 @@
 #include "json_stream_adaptor.hpp"
 #include "macro_def.hpp"
 
-#include <map>
 #include <string>
 #include <variant>
-#include <vector>
-#include <unordered_map>
 #include <type_traits>
 
 namespace JSONpp

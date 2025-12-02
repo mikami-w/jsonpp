@@ -5,7 +5,7 @@
 #include <map>
 #include <unordered_map>
 #include <string>
-#include <cstdint>
+#include <cstddef>
 #include <memory> // for std::allocator
 
 namespace JSONpp

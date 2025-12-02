@@ -7,9 +7,7 @@
 #include "json_stream_adaptor.hpp"
 #include "macro_def.hpp"
 
-#include <cstdint>
 #include <map>
-#include <sstream>
 #include <string>
 #include <variant>
 #include <vector>
@@ -204,6 +202,9 @@ namespace JSONpp
         bool operator!=(basic_json const& other) const {
             return !(*this == other);
         }
+
+        static basic_json parse(std::string_view json_doc);
+        static basic_json parse(std::istream& json_istream);
 
         void dump(std::string& buffer) const;
         // void dump(std::ostream& os) const;

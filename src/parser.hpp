@@ -544,28 +544,6 @@ namespace JSONpp
          */
     }
 
-    /*
-     * Parse a document to JsonType, accessing data with std::string_view.
-     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
-     */
-    template <typename JsonType = json>
-    JsonType parse(std::string_view json_str)
-    {
-        details::StringViewStream stream(json_str);
-        return details::Parser<details::StringViewStream, JsonType>(stream).parse();
-    }
-
-    /*
-     * Parse a document to JsonType, accessing data with std::istream.
-     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
-     */
-    template <typename JsonType = json>
-    JsonType parse(std::istream& json_istream)
-    {
-        details::IStreamStream stream(json_istream);
-        return details::Parser<details::IStreamStream, JsonType>(stream).parse();
-    }
-
 }
 
 #endif //JSONPP_PARSER_H

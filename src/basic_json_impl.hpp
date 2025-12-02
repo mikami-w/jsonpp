@@ -8,6 +8,28 @@ namespace JSONpp
 {
     using namespace traits;
 
+    /*
+     * Parse a document to JsonType, accessing data with std::string_view.
+     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
+     */
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE BASIC_JSON_TYPE::parse(std::string_view json_doc)
+    {
+        details::StringViewStream svs(json_doc);
+        return details::Parser<details::StringViewStream, basic_json>(svs).parse();
+    }
+
+    /*
+     * Parse a document to JsonType, accessing data with std::istream.
+     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
+     */
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE BASIC_JSON_TYPE::parse(std::istream& json_istream)
+    {
+        details::IStreamStream iss(json_istream);
+        return details::Parser<details::IStreamStream, JsonType>(iss).parse();
+    }
+
     BASIC_JSON_TEMPLATE
     void BASIC_JSON_TYPE::dump(std::string& buffer) const
     {

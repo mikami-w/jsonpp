@@ -205,6 +205,9 @@ namespace JSONpp
 
         static basic_json parse(std::string_view json_doc);
         static basic_json parse(std::istream& json_istream);
+        template <typename StreamT,
+            std::enable_if_t<traits::isJsonStream_v<StreamT>, int> = 0>
+        static basic_json parse(StreamT& stream);
 
         void dump(std::string& buffer) const;
         // void dump(std::ostream& os) const;

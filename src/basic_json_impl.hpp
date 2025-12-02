@@ -10,7 +10,6 @@ namespace JSONpp
 
     /*
      * Parse a document to JsonType, accessing data with std::string_view.
-     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
      */
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE BASIC_JSON_TYPE::parse(std::string_view json_doc)
@@ -21,13 +20,23 @@ namespace JSONpp
 
     /*
      * Parse a document to JsonType, accessing data with std::istream.
-     * If the document is empty (or contains nothing but whitespace), the returned value's empty() will be true, otherwise empty() will be false.
      */
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE BASIC_JSON_TYPE::parse(std::istream& json_istream)
     {
         details::IStreamStream iss(json_istream);
-        return details::Parser<details::IStreamStream, JsonType>(iss).parse();
+        return details::Parser<details::IStreamStream, basic_json>(iss).parse();
+    }
+
+    /*
+     * Parse a document to JsonType, accessing data with a JSON Stream.
+     * Data should have been provided to the stream before calling this function.
+     */
+    BASIC_JSON_TEMPLATE
+    template <typename StreamT, std::enable_if_t<traits::isJsonStream_v<StreamT>, int>>
+    BASIC_JSON_TYPE BASIC_JSON_TYPE::parse(StreamT& stream)
+    {
+        return details::Parser<StreamT, basic_json>(stream).parse();
     }
 
     BASIC_JSON_TEMPLATE

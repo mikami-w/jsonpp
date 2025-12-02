@@ -38,7 +38,7 @@ namespace Test
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         std::ostringstream oss;
         oss << std::put_time(std::localtime(&now_c), "%Y%m%d_%H%M%S");
-        return oss.str();
+        return std::move(oss.str());
     }
 
     inline bool is_hidden(fs::directory_entry const& file)
@@ -57,7 +57,7 @@ namespace Test
             {
                 if (is_hidden(dir)) continue;
                 if (!dir.is_directory()) continue;
-
+                if (dir.path().filename().string() == "JSONTestSuite") continue;
                 for (auto& file: fs::directory_iterator(dir))
                 {
                     entries[dir.path().filename()].push_back(file);
@@ -75,6 +75,7 @@ namespace Test
         return entries;
     }
 
+    template <typename = void>
     TestDirectoryEntries& getSortedJSONTestSuiteEntries()
     {
         static TestDirectoryEntries entries;
@@ -137,12 +138,13 @@ namespace Test
         explicit Testee(fs::directory_entry dir) : filedir(std::move(dir))
         {
             if (!dir.is_regular_file())
-                throw std::invalid_argument("Testee must be initialized with a directory entry representing a file.");
+                throw std::invalid_argument("Testee must be initialized with a directory entry representing a file. Current entry: " + dir.path().string());
         }
     };
 
     int doTestFor(Testee const& t, std::ostream& logger = std::cout)
     {
+        using namespace JSONpp;
         logger << "\nTestee: " << t.getFileName() << std::endl;
         if (t.getFileName() == "n_structure_100000_opening_arrays.json")
         {
@@ -160,9 +162,9 @@ namespace Test
         bool passed = true;
         try
         {
-            auto js = JSONpp::parse(t.getString());
+            auto js = json::parse(t.getString());
             logger << "Parsed JSON from string:\t" << js << std::endl;
-        } catch (JSONpp::JsonException& e)
+        } catch (JsonException& e)
         {
             passed = false;
             ++result[SThrew];
@@ -178,17 +180,17 @@ namespace Test
 
         try
         {
-            auto jis = JSONpp::parse(*t.getIStreamPtr());
+            auto jis = json::parse(*t.getIStreamPtr());
             logger << "Parsed JSON from istream:\t" << jis << std::endl;
 
-            auto js = JSONpp::parse(t.getString());
+            auto js = json::parse(t.getString());
             if (js != jis)
             {
                 passed = false;
                 ++result[Inequal];
                 logger << "Inequal JSONs parsed from string and istream in file " << t.getFileName() << std::endl;
             }
-        } catch (JSONpp::JsonException& e)
+        } catch (JsonException& e)
         {
             passed = false;
             ++result[IThrew];
@@ -265,21 +267,23 @@ int main()
     using namespace Test;
     //std::cout << "JSONpp::isContiguousStream_v<JSONpp::StringViewStream>: " << JSONpp::traits::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
 
+    std::string logpath = "/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log";
     constexpr int choice = 1;
     switch (choice)
     {
     case 1:
         {
-            std::ofstream logfile("/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log"
-              , std::ios::out | std::ios::trunc);
+            std::ofstream logfile(logpath, std::ios::out | std::ios::trunc);
             if (!logfile.is_open())
                 throw std::runtime_error("Could not open logfile");
-            // testAll(logfile);
             testJSONTestSuite(logfile);
         } break;
     case 2:
         {
-
+            std::ofstream logfile(logpath, std::ios::out | std::ios::trunc);
+            if (!logfile.is_open())
+                throw std::runtime_error("Could not open logfile");
+            testAll(logfile);
         } break;
 
     default:

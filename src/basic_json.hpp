@@ -59,6 +59,10 @@ namespace JSONpp
             std::is_same_v<T, object>;
 
     private:
+        template <typename JsonT, typename SerializeHandlerT>
+        friend class details::JsonSerializer;
+
+    private:
         JsonType value;
 
         template <typename T>

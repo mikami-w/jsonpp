@@ -21,9 +21,6 @@ namespace JSONpp
         struct EmptyBaseClass {};
     }
 
-    using null_t = std::nullptr_t;
-    constexpr null_t null = nullptr;
-
     BASIC_JSON_TEMPLATE
     class basic_json : public std::conditional_t<std::is_same_v<CustomBaseClass, void>, details::EmptyBaseClass, CustomBaseClass>
     {

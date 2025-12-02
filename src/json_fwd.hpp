@@ -10,6 +10,9 @@
 
 namespace JSONpp
 {
+    using null_t = std::nullptr_t;
+    constexpr null_t null = nullptr;
+
     template <
         template<typename U, typename V, typename... Args> class ObjectType = std::map,
         template<typename U, typename... Args> class ArrayType = std::vector,

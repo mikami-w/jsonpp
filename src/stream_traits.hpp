@@ -1,5 +1,5 @@
-#ifndef JSONPP_TRAITS_HPP
-#define JSONPP_TRAITS_HPP
+#ifndef JSONPP_STREAM_TRAITS_HPP
+#define JSONPP_STREAM_TRAITS_HPP
 
 #include <type_traits>
 #include <cstddef>
@@ -89,4 +89,4 @@ namespace JSONpp::traits
     inline constexpr bool isContiguousStream_v = isContiguousStream<T>::value;
 }
 
-#endif //JSONPP_TRAITS_HPP
+#endif //JSONPP_STREAM_TRAITS_HPP

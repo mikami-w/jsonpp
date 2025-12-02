@@ -1,8 +1,8 @@
-#ifndef JSONPP_HPP
-#define JSONPP_HPP
+#ifndef JSONPP_BASIC_JSON_HPP
+#define JSONPP_BASIC_JSON_HPP
 
 #include "json_fwd.hpp"
-#include "serializer.hpp"
+#include "json_serializer.hpp"
 #include "jsonexception.hpp"
 #include "json_stream_adaptor.hpp"
 #include "macro_def.hpp"
@@ -234,4 +234,4 @@ namespace JSONpp
 
 } // namespace JSONpp
 
-#endif //JSONPP_HPP
+#endif //JSONPP_BASIC_JSON_HPP

@@ -105,7 +105,8 @@ namespace JSONpp
      * Data should have been provided to the stream before calling this function.
      */
     BASIC_JSON_TEMPLATE
-    template <typename StreamT, std::enable_if_t<traits::isJsonStream_v<StreamT>, int>>
+    template <typename StreamT,
+        std::enable_if_t<traits::isJsonStream_v<StreamT>, int>>
     BASIC_JSON_TYPE BASIC_JSON_TYPE::parse(StreamT& stream)
     {
         return details::Parser<StreamT, basic_json>(stream).parse();
@@ -117,6 +118,24 @@ namespace JSONpp
         details::StringSerializeHandler ssh(buffer);
         details::JsonSerializer<basic_json, details::StringSerializeHandler>
             serializer(ssh);
+        serializer.dump(*this);
+    }
+
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::dump(std::ostream& os) const
+    {
+        details::OStreamSerializeHandler ossh(os);
+        details::JsonSerializer<basic_json, details::OStreamSerializeHandler>
+            serializer(ossh);
+        serializer.dump(*this);
+    }
+
+    BASIC_JSON_TEMPLATE
+    template <typename SerializeHandlerT,
+        std::enable_if_t<traits::isJsonSerializeHandler_v<SerializeHandlerT>, int>>
+    void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler)
+    {
+        details::JsonSerializer<basic_json, SerializeHandlerT> serializer(handler);
         serializer.dump(*this);
     }
 

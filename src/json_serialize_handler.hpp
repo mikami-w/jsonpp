@@ -29,6 +29,35 @@ namespace JSONpp
                 buffer.append(cstr, length);
             }
         };
+
+        class OStreamSerializeHandler
+        {
+            std::ostream& out;
+
+        public:
+            explicit OStreamSerializeHandler(std::ostream& os): out(os) {}
+
+            void append(char ch)
+            {
+                out.put(ch);
+            }
+
+            void append(std::string_view str)
+            {
+                out.write(str.data(), str.size());
+            }
+
+            void append(char const* cstr, std::size_t length)
+            {
+                out.write(cstr, length);
+            }
+
+            bool bad() const
+            {
+                return out.bad();
+            }
+        };
+
     }
 }
 

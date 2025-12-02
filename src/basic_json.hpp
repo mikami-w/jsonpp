@@ -210,7 +210,10 @@ namespace JSONpp
         static basic_json parse(StreamT& stream);
 
         void dump(std::string& buffer) const;
-        // void dump(std::ostream& os) const;
+        void dump(std::ostream& os) const;
+        template <typename SerializeHandlerT,
+            std::enable_if_t<traits::isJsonSerializeHandler_v<SerializeHandlerT>, int> = 0>
+        void dump(SerializeHandlerT& handler);
 
         // friend std::ostream& operator<<(std::ostream& os, basic_json const& val);
 
@@ -227,9 +230,8 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     std::ostream& operator<<(std::ostream& os, BASIC_JSON_TYPE const& val)
     {
-        std::string buffer;
-        val.dump(buffer);
-        return os << buffer;
+        val.dump(os);
+        return os;
     }
 
 

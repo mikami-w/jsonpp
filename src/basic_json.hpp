@@ -6,6 +6,7 @@
 #include "jsonexception.hpp"
 #include "json_stream_adaptor.hpp"
 #include "macro_def.hpp"
+#include "traits.hpp"
 
 #include <string>
 #include <variant>
@@ -21,13 +22,51 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     class basic_json : public std::conditional_t<std::is_same_v<CustomBaseClass, void>, details::EmptyBaseClass, CustomBaseClass>
     {
+    private:
+        using _test_object_type = ObjectType<StringType, int>;
+        static constexpr bool _is_map_like =
+            traits::details_t::has_key_compare<_test_object_type>::value;
+        static constexpr bool _is_unordered_map_like =
+            traits::details_t::has_hasher<_test_object_type>::value;
+        using _object_allocator_t = AllocatorType<std::pair<const StringType, basic_json>>;
+
+        template <bool IsMapLike, bool IsUnorderedMapLike, typename Dummy = void>
+        struct _object_type_selector
+        {
+            // assume it only needs K, V, Allocator (non-standard container)
+            using type = ObjectType<StringType,
+                                   basic_json,
+                                   _object_allocator_t>;
+        };
+
+        template <typename Dummy>
+        struct _object_type_selector<true, false, Dummy>
+        {
+            // assume it's a std::map-like container
+            using type = ObjectType<StringType,
+                                    basic_json,
+                                    std::less<StringType>,
+                                    _object_allocator_t>;
+        };
+
+        template <typename Dummy>
+        struct _object_type_selector<false, true, Dummy>
+        {
+            // assume it's a std::unordered_map-like container
+            using type = ObjectType<StringType,
+                                    basic_json,
+                                    std::hash<StringType>,
+                                    std::equal_to<StringType>,
+                                    _object_allocator_t>;
+        };
+
     public:
         using boolean = BooleanType;
         using number_int = NumberIntegerType;
         using number_float = NumberFloatType;
         using string = StringType;
         using array = ArrayType<basic_json, AllocatorType<basic_json>>;
-        using object = ObjectType<StringType, basic_json, std::less<StringType>, AllocatorType<std::pair<const StringType, basic_json>>>;
+        using object = typename _object_type_selector<_is_map_like, _is_unordered_map_like>::type;
 
         using JsonType = std::variant <
             std::monostate,
@@ -46,6 +85,7 @@ namespace JSONpp
         constexpr static bool isJsonValueType =
             std::is_same_v<T, std::monostate> ||
             std::is_same_v<T, null_t> ||
+            std::is_same_v<T, bool> ||
             std::is_same_v<T, boolean> ||
             std::is_integral_v<T> ||
             std::is_same_v<T, number_int> ||

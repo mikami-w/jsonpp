@@ -28,7 +28,7 @@ namespace JSONpp
     class basic_json;
 
     using json = basic_json<>;
-    // using unordered_json = basic_json<std::unordered_map>; // 目前不支持, 需完善ObjectType的SFINAE模板识别
+    using unordered_json = basic_json<std::unordered_map>;
 
 }
 #endif //JSONPP_JSON_FWD_HPP

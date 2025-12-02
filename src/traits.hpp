@@ -38,6 +38,20 @@ namespace JSONpp::traits
         {
             bool operator()(char const&) const { return false; }
         };
+
+        // trait for std::map
+        template <typename T, typename = void>
+        struct has_key_compare: std::false_type {};
+
+        template <typename T>
+        struct has_key_compare<T, std::void_t<typename T::key_compare>>: std::true_type {};
+
+        // trait for std::unordered_map
+        template <typename T, typename = void>
+        struct has_hasher: std::false_type {};
+
+        template <typename T>
+        struct has_hasher<T, std::void_t<typename T::hasher>>: std::true_type {};
     }
 
     template <typename T>
@@ -46,7 +60,7 @@ namespace JSONpp::traits
     template <typename T>
     inline constexpr bool isJsonStream_v = isJsonStream<T>::value;
 
-    // 用于区分流能否直接获取完整大小
+    // Is the stream capable of directly obtaining its complete size
     template <typename T, typename = void>
     struct isSizedStream: std::false_type {};
 
@@ -57,7 +71,7 @@ namespace JSONpp::traits
     template <typename T>
     inline constexpr bool isSizedStream_v = isSizedStream<T>::value;
 
-    // 是否是随机访问流
+    // Is the stream a seekable stream (provides seek capability)
     template <typename T, typename = void>
     struct isSeekableStream: std::false_type {};
 
@@ -72,7 +86,7 @@ namespace JSONpp::traits
     template <typename T>
     inline constexpr bool isSeekableStream_v = isSeekableStream<T>::value;
 
-    // 是否连续存储 (提供chunk访问能力)
+    // Is the stream a contiguous stream (provides chunk access capability)
     template <typename T, typename = void>
     struct isContiguousStream : std::false_type {};
 
@@ -88,6 +102,7 @@ namespace JSONpp::traits
     template <typename T>
     inline constexpr bool isContiguousStream_v = isContiguousStream<T>::value;
 
+    // trait for JSON Serialize Handler
     template <typename T, typename = void>
     struct isJsonSerializeHandler : std::false_type {};
 

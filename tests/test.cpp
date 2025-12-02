@@ -16,6 +16,10 @@ namespace fs = std::filesystem;
 
 namespace Test
 {
+    using namespace JSONpp;
+
+    using json_test = unordered_json;
+
     unsigned result[6]{}; // Passed, IThrew, SThrew, Inequal, SFailed, IFailed
 
     static constexpr char const* testFilePath = "../tests/";
@@ -144,7 +148,6 @@ namespace Test
 
     int doTestFor(Testee const& t, std::ostream& logger = std::cout)
     {
-        using namespace JSONpp;
         logger << "\nTestee: " << t.getFileName() << std::endl;
         if (t.getFileName() == "n_structure_100000_opening_arrays.json")
         {
@@ -162,7 +165,7 @@ namespace Test
         bool passed = true;
         try
         {
-            auto js = json::parse(t.getString());
+            auto js = json_test::parse(t.getString());
             logger << "Parsed JSON from string:\t" << js << std::endl;
         } catch (JsonException& e)
         {
@@ -180,10 +183,10 @@ namespace Test
 
         try
         {
-            auto jis = json::parse(*t.getIStreamPtr());
+            auto jis = json_test::parse(*t.getIStreamPtr());
             logger << "Parsed JSON from istream:\t" << jis << std::endl;
 
-            auto js = json::parse(t.getString());
+            auto js = json_test::parse(t.getString());
             if (js != jis)
             {
                 passed = false;
@@ -252,9 +255,6 @@ namespace Test
 
     void temp_test()
     {
-        using namespace JSONpp;
-        using namespace Test;
-
         std::string testdir = "error_handling";
         std::string testnum = "010";
         fs::directory_entry testfile("../tests/" + testdir + "/" + testdir + testnum + ".json");

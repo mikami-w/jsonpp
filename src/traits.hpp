@@ -87,6 +87,20 @@ namespace JSONpp::traits
 
     template <typename T>
     inline constexpr bool isContiguousStream_v = isContiguousStream<T>::value;
+
+    template <typename T, typename = void>
+    struct isJsonSerializeHandler : std::false_type {};
+
+    template <typename T>
+    struct isJsonSerializeHandler<T, std::void_t<
+        decltype(std::declval<T>().append(char())),
+        decltype(std::declval<T>().append(std::string_view())),
+        decltype(std::declval<T>().append((char const*)0, std::size_t()))
+    >>
+        : std::true_type {};
+
+    template <typename T>
+    inline constexpr bool isJsonSerializeHandler_v = isJsonSerializeHandler<T>::value;
 }
 
 #endif //JSONPP_STREAM_TRAITS_HPP

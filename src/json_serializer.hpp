@@ -20,6 +20,9 @@ namespace JSONpp
         template <typename JsonT, typename SerializeHandlerT>
         class JsonSerializer
         {
+            static_assert(traits::isJsonSerializeHandler_v<SerializeHandlerT>,
+                "SerializeHandlerT should be a JSON Serialize Handler.");
+
             using boolean = typename JsonT::boolean;
             using number_int = typename JsonT::number_int;
             using number_float = typename JsonT::number_float;

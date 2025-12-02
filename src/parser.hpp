@@ -2,7 +2,7 @@
 #define JSONPP_PARSER_H
 
 #include "macro_def.hpp"
-#include "stream_traits.hpp"
+#include "traits.hpp"
 #include "jsonexception.hpp"
 #include "basic_json.hpp"
 

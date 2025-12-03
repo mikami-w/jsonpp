@@ -4,8 +4,9 @@ cmake-build-*
 build
 
 tests/*
-!tests/test.cpp
 !tests/.*
+!tests/test_parsing_serializing.cpp
+!tests/test_usage.cpp
 
 DONOTADD
 .clang-tidy

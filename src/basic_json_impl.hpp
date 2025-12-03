@@ -10,6 +10,89 @@ namespace JSONpp
     using namespace traits;
 
     BASIC_JSON_TEMPLATE
+    template <typename BASIC_JSON_TYPE::Type T>
+    void BASIC_JSON_TYPE::set_type_impl()
+    {
+        if constexpr (T == Type::empty)
+            value.template emplace<std::monostate>();
+        else if constexpr (T == Type::null)
+            value.template emplace<null_t>();
+        else if constexpr (T == Type::object)
+            value.template emplace<object>();
+        else if constexpr (T == Type::array)
+            value.template emplace<array>();
+        else if constexpr (T == Type::string)
+            value.template emplace<string>();
+        else if constexpr (T == Type::boolean)
+            value.template emplace<boolean>(false);
+        else if constexpr (T == Type::number_int)
+            value.template emplace<number_int>(0);
+        else if constexpr (T == Type::number_float)
+            value.template emplace<number_float>(0.0);
+    }
+
+    BASIC_JSON_TEMPLATE
+    template <typename T>
+    T& BASIC_JSON_TYPE::as_impl(value_t& v, char const* typeName)
+    {
+        try
+        {
+            return std::get<T>(v);
+        }
+        catch (const std::bad_variant_access&)
+        {
+            throw JsonTypeError(std::string("Value is not a ") + typeName);
+        }
+    }
+
+    BASIC_JSON_TEMPLATE
+    template <typename T>
+    T const& BASIC_JSON_TYPE::as_impl(value_t const& v, char const* typeName)
+    {
+        try
+        {
+            return std::get<T>(v);
+        }
+        catch (const std::bad_variant_access&)
+        {
+            throw JsonTypeError(std::string("Value is not a ") + typeName);
+        }
+    }
+
+    BASIC_JSON_TEMPLATE
+    template <typename BASIC_JSON_TYPE::Type T>
+    void BASIC_JSON_TYPE::set_type(bool clear_content)
+    {
+        if (!clear_content && type() == T) return; // do nothing if already of type T
+        set_type_impl<T>();
+    }
+
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::set_type(typename BASIC_JSON_TYPE::Type const& t, bool clear_content)
+    {
+        if (!clear_content && type() == t) return;
+
+        switch (t)
+        {
+        case Type::empty:       set_type_impl<Type::empty>(); break;
+        case Type::null:        set_type_impl<Type::null>(); break;
+        case Type::boolean:     set_type_impl<Type::boolean>(); break;
+        case Type::number_int:  set_type_impl<Type::number_int>(); break;
+        case Type::number_float:set_type_impl<Type::number_float>(); break;
+        case Type::string:      set_type_impl<Type::string>(); break;
+        case Type::array:       set_type_impl<Type::array>(); break;
+        case Type::object:      set_type_impl<Type::object>(); break;
+        default:
+#if defined(__GNUC__) || defined(__clang__)
+            __builtin_unreachable();
+#elif defined(_MSC_VER)
+            __assume(0);
+#endif
+            break;
+        }
+    }
+
+    BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::size_t index)
     {
         auto& arr = as_array();
@@ -41,6 +124,15 @@ namespace JSONpp
         if (index >= arr.size())
             throw JsonTypeError("JSON array index out of range");
         return arr[index];
+    }
+
+    BASIC_JSON_TEMPLATE
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::string const& key)
+    {
+        if (empty())
+            set_type(Type::object);
+
+        return as_object()[key];
     }
 
     BASIC_JSON_TEMPLATE

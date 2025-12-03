@@ -11,6 +11,7 @@
 #include <string>
 #include <variant>
 #include <type_traits>
+#include <cstdint>
 
 namespace JSONpp
 {
@@ -68,7 +69,19 @@ namespace JSONpp
         using array = ArrayType<basic_json, AllocatorType<basic_json>>;
         using object = typename _object_type_selector<_is_map_like, _is_unordered_map_like>::type;
 
-        using JsonType = std::variant <
+        enum class Type: std::uint8_t
+        {
+            empty,
+            null,
+            boolean,
+            number_int,
+            number_float,
+            string,
+            array,
+            object
+        };
+
+        using value_t = std::variant <
             std::monostate,
             null_t,
             boolean,
@@ -79,7 +92,7 @@ namespace JSONpp
             object
         >;
 
-        using json_type = BASIC_JSON_TYPE;
+        using json_t = BASIC_JSON_TYPE;
 
         template <typename T>
         constexpr static bool isJsonValueType =
@@ -100,33 +113,17 @@ namespace JSONpp
         friend class details::JsonSerializer;
 
     private:
-        JsonType value;
+        value_t value;
+
+    private:
+        template <Type T>
+        void set_type_impl();
 
         template <typename T>
-        static T& as_impl(JsonType& v, char const* typeName)
-        {
-            try
-            {
-                return std::get<T>(v);
-            }
-            catch (const std::bad_variant_access&)
-            {
-                throw JsonTypeError(std::string("Value is not a ") + typeName);
-            }
-        }
+        static T& as_impl(value_t& v, char const* typeName);
 
         template <typename T>
-        static T const& as_impl(JsonType const& v, char const* typeName)
-        {
-            try
-            {
-                return std::get<T>(v);
-            }
-            catch (const std::bad_variant_access&)
-            {
-                throw JsonTypeError(std::string("Value is not a ") + typeName);
-            }
-        }
+        static T const& as_impl(value_t const& v, char const* typeName);
 
     public:
         /*
@@ -162,6 +159,10 @@ namespace JSONpp
          * end constructors and destructor
          */
 
+        template <Type T>
+        void set_type(bool clear_content = false);
+        void set_type(Type const& t, bool clear_content = false);
+
         basic_json& operator=(basic_json const& other) = default;
         basic_json& operator=(basic_json&& other) noexcept = default;
 
@@ -176,6 +177,7 @@ namespace JSONpp
         /*
          * type checkers
          */
+        Type type() const noexcept { return static_cast<Type>(value.index()); }
         bool empty() const noexcept { return std::holds_alternative<std::monostate>(value); }
         bool is_null() const noexcept { return std::holds_alternative<null_t>(value); }
         bool is_bool() const noexcept { return std::holds_alternative<boolean>(value); }
@@ -237,7 +239,7 @@ namespace JSONpp
         basic_json& at(std::size_t);
         basic_json const& at(std::size_t) const;
 
-        basic_json& operator[](std::string const& key) { return as_object()[key]; }
+        basic_json& operator[](std::string const& key);
         basic_json const& operator[](std::string const& key) const;
         basic_json& at(std::string const& key);
         basic_json const& at(std::string const& key) const;

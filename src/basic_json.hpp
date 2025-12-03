@@ -153,16 +153,25 @@ namespace JSONpp
         explicit basic_json(std::string_view val): value(string(val)) {} // Explicit to prevent expensive, implicit copies from a non-owning string_view.
         basic_json(array val): value(std::move(val)) {}
         basic_json(object val): value(std::move(val)) {}
+
+        basic_json(basic_json const& other) = default;
+        basic_json(basic_json&& other) noexcept = default;
+
+        ~basic_json() = default;
         /*
-         * end constructors
+         * end constructors and destructor
          */
 
-        template <typename T,
-            std::enable_if_t<isJsonValueType<T>, int> = 0>
-        basic_json& operator=(T val) { value = std::move(val); return *this; }
+        basic_json& operator=(basic_json const& other) = default;
+        basic_json& operator=(basic_json&& other) noexcept = default;
 
-        basic_json& operator=(std::initializer_list<basic_json>); // TODO: implement
-        // end operator =
+        template <typename T,
+            std::enable_if_t<isJsonValueType<std::decay<T>> &&
+                            !std::is_same_v<std::decay<T>, basic_json>, int> = 0>
+        basic_json& operator=(T&& val) { value = std::forward<T>(val); return *this; }
+
+        void swap(basic_json& other) noexcept { value.swap(other); }
+        friend void swap(basic_json& lh, basic_json& rhs) noexcept { lh.swap(rhs); } // for ADL (Argument-Dependent Lookup)
 
         /*
          * type checkers

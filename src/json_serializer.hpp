@@ -125,6 +125,14 @@ namespace JSONpp
                             char cbuf[MAX_DOUBLE_CHARS];
                             auto result = std::to_chars(cbuf, cbuf + sizeof(cbuf), v, std::chars_format::general);
                             sh.append(cbuf, result.ptr - cbuf);
+
+                            std::string_view written(cbuf, result.ptr - cbuf);
+                            if (written.find('.') == std::string_view::npos &&
+                                written.find('e') == std::string_view::npos &&
+                                written.find('E') == std::string_view::npos)
+                            {
+                                sh.append(".0", 2); // ensure that float numbers have a decimal part
+                            }
                         }
                         if constexpr (std::is_same_v<T, string>)
                         {

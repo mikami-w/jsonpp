@@ -2,6 +2,8 @@
 #define JSONPP_JSON_SERIALIZE_HANDLER_HPP
 
 #include <string>
+#include <string_view>
+#include <ostream>
 
 namespace JSONpp
 {

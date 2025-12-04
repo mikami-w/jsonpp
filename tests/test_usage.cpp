@@ -173,9 +173,9 @@ TEST(JsonUsageTest, ExceptionSafety) {
 
 // 1. 测试编译期模板版本 set_type<T>()
 TEST(JsonSetTypeTest, CompileTimeTypeSwitching) {
-    json j; // 默认为 null
+    json j; // 默认为 empty
 
-    // Null -> Array
+    // empty -> Array
     j.set_type<json::Type::array>();
     EXPECT_TRUE(j.is_array());
     EXPECT_TRUE(j.as_array().empty()); // 新构造的 array 应为空

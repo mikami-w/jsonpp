@@ -3,10 +3,8 @@
 cmake-build-*
 build
 
-tests/*
-!tests/.*
-!tests/test_parsing_serializing.cpp
-!tests/test_usage.cpp
+tests/JSONTestSuite
+tests/test_cases_*
+tests/manual_validation_tests/test_cases_*
 
 DONOTADD
-.clang-tidy

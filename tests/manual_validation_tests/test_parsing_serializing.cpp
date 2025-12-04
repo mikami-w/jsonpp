@@ -10,21 +10,19 @@
 #include <map>
 #include <chrono>
 
-#include "../src/jsonpp.hpp"
+#include "../../src/jsonpp.hpp"
+#include "../test_utils.hpp"
 
 namespace fs = std::filesystem;
 
 namespace Test
 {
     using namespace JSONpp;
-
     using json_test = unordered_json;
 
+    static constexpr char const* testFilePath = "../tests/manual_validation_tests/";
+
     unsigned result[6]{}; // Passed, IThrew, SThrew, Inequal, SFailed, IFailed
-
-    static constexpr char const* testFilePath = "../tests/";
-
-    using TestDirectoryEntries = std::unordered_map<std::string, std::vector<fs::directory_entry>>;
 
     enum TestStatus: std::uint8_t
     {
@@ -36,21 +34,7 @@ namespace Test
         IFailed
     };
 
-    std::string getDateTimeString()
-    {
-        auto now = std::chrono::system_clock::now();
-        std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-        std::ostringstream oss;
-        oss << std::put_time(std::localtime(&now_c), "%Y%m%d_%H%M%S");
-        return std::move(oss.str());
-    }
-
-    inline bool is_hidden(fs::directory_entry const& file)
-    {
-        return file.path().filename().string().front() == '.';
-    }
-
-    TestDirectoryEntries& getSortedDirectoryEntries()
+    inline TestDirectoryEntries& getSortedDirectoryEntries()
     {
         static TestDirectoryEntries entries;
         static bool initialized = false;
@@ -109,26 +93,6 @@ namespace Test
             initialized = true;
         }
         return entries;
-    }
-
-    std::string readFileToString(std::string const& filename) {
-        std::ifstream file(filename);
-        if (!file.is_open()) {
-            std::cerr << "Error: Could not open file '" << filename << "'" << std::endl;
-            return "";
-        }
-
-        // 一次性构造字符串
-        //    - std::istreambuf_iterator<char>(file) : 指向文件流开始的迭代器
-        //    - std::istreambuf_iterator<char>()     : 默认构造函数，表示 "end-of-stream"
-        std::string content(
-            (std::istreambuf_iterator<char>(file)),
-            (std::istreambuf_iterator<char>())
-        );
-
-        file.close();
-
-        return content;
     }
 
     class Testee
@@ -257,7 +221,7 @@ namespace Test
 
     void temp_test()
     {
-        std::string testdir = "error_handling";
+        std::string testdir = "test_cases_error_handling";
         std::string testnum = "010";
         fs::directory_entry testfile("../tests/" + testdir + "/" + testdir + testnum + ".json");
         doTestFor(Testee(testfile));
@@ -270,7 +234,7 @@ int main()
     //std::cout << "JSONpp::isContiguousStream_v<JSONpp::StringViewStream>: " << JSONpp::traits::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
 
     std::string logpath = "/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log";
-    constexpr int choice = 1;
+    constexpr int choice = 2;
     switch (choice)
     {
     case 1:

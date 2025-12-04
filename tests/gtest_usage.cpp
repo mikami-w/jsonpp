@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../src/jsonpp.hpp"
+#include "jsonpp.hpp"
 using namespace JSONpp;
 
 // Basic assignment and type switching

@@ -20,6 +20,18 @@ namespace JSONpp
         struct EmptyBaseClass {};
     }
 
+    enum class Type: std::uint8_t
+    {
+        empty,
+        null,
+        boolean,
+        number_int,
+        number_float,
+        string,
+        array,
+        object
+    };
+
     BASIC_JSON_TEMPLATE
     class basic_json : public std::conditional_t<std::is_same_v<CustomBaseClass, void>, details::EmptyBaseClass, CustomBaseClass>
     {
@@ -68,18 +80,6 @@ namespace JSONpp
         using string = StringType;
         using array = ArrayType<basic_json, AllocatorType<basic_json>>;
         using object = typename _object_type_selector<_is_map_like, _is_unordered_map_like>::type;
-
-        enum class Type: std::uint8_t
-        {
-            empty,
-            null,
-            boolean,
-            number_int,
-            number_float,
-            string,
-            array,
-            object
-        };
 
         using value_t = std::variant <
             std::monostate,
@@ -243,7 +243,6 @@ namespace JSONpp
         basic_json const& operator[](std::string const& key) const;
         basic_json& at(std::string const& key);
         basic_json const& at(std::string const& key) const;
-
         /*
          * end accessors for array and object
          */

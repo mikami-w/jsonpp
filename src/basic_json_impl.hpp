@@ -10,7 +10,7 @@ namespace JSONpp
     using namespace traits;
 
     BASIC_JSON_TEMPLATE
-    template <typename BASIC_JSON_TYPE::Type T>
+    template <Type T>
     void BASIC_JSON_TYPE::set_type_impl()
     {
         if constexpr (T == Type::empty)
@@ -60,7 +60,7 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    template <typename BASIC_JSON_TYPE::Type T>
+    template <Type T>
     void BASIC_JSON_TYPE::set_type(bool clear_content)
     {
         if (!clear_content && type() == T) return; // do nothing if already of type T
@@ -68,7 +68,7 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    void BASIC_JSON_TYPE::set_type(typename BASIC_JSON_TYPE::Type const& t, bool clear_content)
+    void BASIC_JSON_TYPE::set_type(Type const& t, bool clear_content)
     {
         if (!clear_content && type() == t) return;
 

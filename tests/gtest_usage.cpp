@@ -47,9 +47,13 @@ TEST(JsonUsageTest, ObjectManipulation) {
     EXPECT_EQ(j_obj["name"].as_string(), "Mikami");
     EXPECT_EQ(j_obj["age"].as_int(), 25);
 
-    // 2. 修改现有 Key
+    // 2. 修改, 访问现有 Key
     j_obj["age"] = 26;
     EXPECT_EQ(j_obj["age"].as_int(), 26);
+    EXPECT_THROW({
+        auto val = j_obj.at("non_existent_key");
+        (void)val;
+    }, JsonOutOfRange);
 
     // 3. 嵌套对象赋值
     j_obj["address"]["city"] = "Tokyo";
@@ -60,9 +64,7 @@ TEST(JsonUsageTest, ObjectManipulation) {
 
     // 4. const 访问 (如果你保留了 const 重载)
     const json j_const = j_obj;
-    // 注意: 这里取决于你是否实现了 const operator[] 或者需要用 .at()
-    // 假设你使用了 .at() 策略:
-    EXPECT_EQ(j_const.as_object().at("name").as_string(), "Mikami");
+    EXPECT_EQ(j_const.at("name").as_string(), "Mikami");
 }
 
 // Array manipulation: constructing, modifying, and iterating
@@ -75,9 +77,13 @@ TEST(JsonUsageTest, ArrayManipulation) {
     EXPECT_EQ(j_arr.as_array().size(), 3);
     EXPECT_EQ(j_arr[0].as_int(), 1);
 
-    // 2. 修改元素
+    // 2. 修改, 访问元素
     j_arr[1] = 42;
     EXPECT_EQ(j_arr[1].as_int(), 42);
+    EXPECT_THROW({
+        auto& val = j_arr.at(10000);
+        (void)val;
+    }, JsonOutOfRange);
 
     // 3. 使用底层容器方法 (push_back)
     // 因为 basic_json 没有直接暴露 push_back，我们需要通过 as_array()
@@ -157,18 +163,16 @@ TEST(JsonUsageTest, ExceptionSafety) {
     }, JsonTypeError);
 
     // 2. 错误的下标访问 (对非对象/非数组使用下标)
-    // 注意：如果是非 const 引用，operator[] 可能会抛出异常或断言失败，取决于你的实现
-    // 如果你的实现是 as_object()[key]，那么对 string 调用 as_object() 应该抛出类型错误
     EXPECT_THROW({
         j["key"] = 1;
     }, JsonTypeError);
 
-    // 3. const 对象访问不存在的 key (如果你实现了 .at() 或抛异常的 const operator[])
+    // 3. const 对象访问不存在的 key
     const json obj_const = json::object{{"a", 1}};
     EXPECT_THROW({
-        auto val = obj_const["b"]; // 假设这会抛异常
+        auto val = obj_const["b"];
         (void)val;
-    }, JsonTypeError); // 或具体的错误类型
+    }, JsonOutOfRange);
 }
 
 // 1. 测试编译期模板版本 set_type<T>()
@@ -176,27 +180,27 @@ TEST(JsonSetTypeTest, CompileTimeTypeSwitching) {
     json j; // 默认为 empty
 
     // empty -> Array
-    j.set_type<json::Type::array>();
+    j.set_type<Type::array>();
     EXPECT_TRUE(j.is_array());
     EXPECT_TRUE(j.as_array().empty()); // 新构造的 array 应为空
 
     // Array -> Object
-    j.set_type<json::Type::object>();
+    j.set_type<Type::object>();
     EXPECT_TRUE(j.is_object());
     EXPECT_TRUE(j.as_object().empty());
 
     // Object -> String
-    j.set_type<json::Type::string>();
+    j.set_type<Type::string>();
     EXPECT_TRUE(j.is_string());
     EXPECT_EQ(j.as_string(), ""); // string 默认构造为空
 
     // String -> Boolean
-    j.set_type<json::Type::boolean>();
+    j.set_type<Type::boolean>();
     EXPECT_TRUE(j.is_bool());
     EXPECT_FALSE(j.as_bool()); // boolean 默认构造为 false
 
     // Boolean -> Number Int
-    j.set_type<json::Type::number_int>();
+    j.set_type<Type::number_int>();
     EXPECT_TRUE(j.is_int());
     EXPECT_EQ(j.as_int(), 0); // number 默认构造为 0
 }
@@ -206,12 +210,12 @@ TEST(JsonSetTypeTest, RuntimeTypeSwitching) {
     json j = "initial string";
 
     // String -> Number Float
-    j.set_type(json::Type::number_float);
+    j.set_type(Type::number_float);
     EXPECT_TRUE(j.is_float());
     EXPECT_DOUBLE_EQ(j.as_float(), 0.0);
 
     // Number -> Null
-    j.set_type(json::Type::null);
+    j.set_type(Type::null);
     EXPECT_TRUE(j.is_null());
 }
 
@@ -223,9 +227,9 @@ TEST(JsonSetTypeTest, ContentPreservation) {
     json j_int = 12345;
 
     // 尝试设置为相同类型，且不清除内容
-    j_arr.set_type<json::Type::array>(false);
-    j_str.set_type<json::Type::string>(false);
-    j_int.set_type(json::Type::number_int, false); // 测试运行期版本接口
+    j_arr.set_type<Type::array>(false);
+    j_str.set_type<Type::string>(false);
+    j_int.set_type(Type::number_int, false); // 测试运行期版本接口
 
     // 验证数据未丢失
     EXPECT_EQ(j_arr.as_array().size(), 3);
@@ -244,9 +248,9 @@ TEST(JsonSetTypeTest, ContentClearing) {
     json j_int = 12345;
 
     // 尝试设置为相同类型，但强制清除内容
-    j_arr.set_type<json::Type::array>(true);
-    j_str.set_type<json::Type::string>(true);
-    j_int.set_type(json::Type::number_int, true);
+    j_arr.set_type<Type::array>(true);
+    j_str.set_type<Type::string>(true);
+    j_int.set_type(Type::number_int, true);
 
     // 验证数据已重置为默认值
     EXPECT_TRUE(j_arr.is_array());
@@ -265,8 +269,35 @@ TEST(JsonSetTypeTest, TypeChangeAlwaysResets) {
     json j = json::array({1, 2, 3});
 
     // 切换为 Object，即使传入 false，因为类型不同，也应该变成空的 Object
-    j.set_type<json::Type::object>(false);
+    j.set_type<Type::object>(false);
 
     EXPECT_TRUE(j.is_object());
     EXPECT_TRUE(j.as_object().empty()); // 此时绝不应该保留 Array 的数据
+}
+
+TEST(JsonUsageTest, NumberTypeDistinction) {
+    json j_int = 42;
+    json j_float = 42.0;
+
+    // is_number() 对两者都应为 true
+    EXPECT_TRUE(j_int.is_number());
+    EXPECT_TRUE(j_float.is_number());
+
+    // is_int() / is_float() 互斥性验证
+    EXPECT_TRUE(j_int.is_int());
+    EXPECT_FALSE(j_int.is_float());
+
+    EXPECT_FALSE(j_float.is_int());
+    EXPECT_TRUE(j_float.is_float());
+}
+
+TEST(JsonUsageTest, ADLSwap) {
+    json j1 = 10;
+    json j2 = 20;
+
+    using std::swap;
+    swap(j1, j2); // 应该调用 friend swap
+
+    EXPECT_EQ(j1.as_int(), 20);
+    EXPECT_EQ(j2.as_int(), 10);
 }

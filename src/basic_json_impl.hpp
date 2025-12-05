@@ -95,9 +95,9 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::size_t index)
     {
-        auto& arr = as_array();
-        assert(index < arr.size() && "JSON array index out of range");
-        return arr[index];
+        return const_cast<basic_json&>(
+            static_cast<basic_json const&>(*this).operator[](index)
+        );
     }
 
     BASIC_JSON_TEMPLATE
@@ -111,10 +111,9 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::at(std::size_t index)
     {
-        auto& arr = as_array();
-        if (index >= arr.size())
-            throw JsonTypeError("JSON array index out of range");
-        return arr[index];
+        return const_cast<basic_json&>(
+            static_cast<basic_json const&>(*this).at(index)
+        );
     }
 
     BASIC_JSON_TEMPLATE
@@ -122,7 +121,7 @@ namespace JSONpp
     {
         auto const& arr = as_array();
         if (index >= arr.size())
-            throw JsonTypeError("JSON array index out of range");
+            throw JsonOutOfRange(JsonOutOfRange::ARRAY_OUT_OF_RANGE_MESSAGE);
         return arr[index];
     }
 
@@ -138,21 +137,15 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE const& BASIC_JSON_TYPE::operator[](std::string const& key) const
     {
-        auto const& obj = as_object();
-        auto it = obj.find(key);
-        if (it == obj.end())
-            throw JsonTypeError("Key \"" + key + "\" not found in JSON object");
-        return it->second;
+        return at(key);
     }
 
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::at(std::string const& key)
     {
-        auto& obj = as_object();
-        auto it = obj.find(key);
-        if (it == obj.end())
-            throw JsonTypeError("Key \"" + key + "\" not found in JSON object");
-        return it->second;
+        return const_cast<basic_json&>(
+            static_cast<basic_json const&>(*this).at(key)
+        );
     }
 
     BASIC_JSON_TEMPLATE
@@ -161,7 +154,7 @@ namespace JSONpp
         auto const& obj = as_object();
         auto it = obj.find(key);
         if (it == obj.end())
-            throw JsonTypeError("Key \"" + key + "\" not found in JSON object");
+            throw JsonOutOfRange(JsonOutOfRange::KEY_NOT_FOUND_MESSAGE);
         return it->second;
     }
 

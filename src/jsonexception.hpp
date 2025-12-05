@@ -46,6 +46,15 @@ namespace JSONpp
             JsonException(DEPTH_LIMIT_EXCEEDED_MESSAGE + std::string(" at position ") + std::to_string(pos)) {}
     };
 
+    class JsonOutOfRange : public JsonException
+    {
+    public:
+        static constexpr char const* ARRAY_OUT_OF_RANGE_MESSAGE = "JSON array index out of range";
+        static constexpr char const* KEY_NOT_FOUND_MESSAGE = "Key not found in JSON object";
+
+        JsonOutOfRange(std::string const& msg):
+            JsonException(msg) {}
+    };
     /*
      * end JSON exceptions
      */

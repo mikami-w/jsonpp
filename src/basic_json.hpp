@@ -172,7 +172,7 @@ namespace JSONpp
         basic_json& operator=(T&& val) { value = std::forward<T>(val); return *this; }
 
         void swap(basic_json& other) noexcept { value.swap(other); }
-        friend void swap(basic_json& lh, basic_json& rhs) noexcept { lh.swap(rhs); } // for ADL (Argument-Dependent Lookup)
+        friend void swap(basic_json& lhs, basic_json& rhs) noexcept { lhs.value.swap(rhs.value); } // for ADL (Argument-Dependent Lookup)
 
         /*
          * type checkers

@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include <cstddef>
+#include <string_view>
 
 namespace JSONpp::traits
 {

@@ -167,11 +167,11 @@ namespace JSONpp
         basic_json& operator=(basic_json&& other) noexcept = default;
 
         template <typename T,
-            std::enable_if_t<isJsonValueType<std::decay<T>> &&
-                            !std::is_same_v<std::decay<T>, basic_json>, int> = 0>
+            std::enable_if_t<isJsonValueType<std::decay_t<T>> &&
+                            !std::is_same_v<std::decay_t<T>, basic_json>, int> = 0>
         basic_json& operator=(T&& val) { value = std::forward<T>(val); return *this; }
 
-        void swap(basic_json& other) noexcept { value.swap(other); }
+        void swap(basic_json& other) noexcept { value.swap(other.value); }
         friend void swap(basic_json& lhs, basic_json& rhs) noexcept { lhs.value.swap(rhs.value); } // for ADL (Argument-Dependent Lookup)
 
         /*

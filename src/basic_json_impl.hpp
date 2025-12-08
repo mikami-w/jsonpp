@@ -128,7 +128,7 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::string const& key)
     {
-        if (empty())
+        if (empty() || is_null())
             set_type(Type::object);
 
         return as_object()[key];
@@ -161,7 +161,7 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     void BASIC_JSON_TYPE::push_back(BASIC_JSON_TYPE&& val)
     {
-        if (empty())
+        if (empty() || is_null())
             set_type<Type::array>();
         as_array().emplace_back(std::move(val));
     }
@@ -169,7 +169,7 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     void BASIC_JSON_TYPE::push_back(BASIC_JSON_TYPE const& val)
     {
-        if (empty())
+        if (empty() || is_null())
             set_type<Type::array>();
         as_array().emplace_back(val);
     }
@@ -178,7 +178,7 @@ namespace JSONpp
     template <typename ... Args>
     void BASIC_JSON_TYPE::emplace_back(Args&&... args)
     {
-        if (empty())
+        if (empty() || is_null())
             set_type<Type::array>();
         as_array().emplace_back(std::forward<Args>(args)...);
     }
@@ -186,7 +186,7 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     auto BASIC_JSON_TYPE::insert(std::pair<string, basic_json> const& pair)
     {
-        if (empty())
+        if (empty() || is_null())
             set_type<Type::object>();
         return as_object().insert(pair);
     }
@@ -194,7 +194,7 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     auto BASIC_JSON_TYPE::insert(std::pair<string, basic_json>&& pair)
     {
-        if (empty())
+        if (empty() || is_null())
             set_type(Type::object);
         return as_object().emplace(std::move(pair));
     }
@@ -203,7 +203,7 @@ namespace JSONpp
     template <typename ... Args>
     auto BASIC_JSON_TYPE::emplace(Args&&... args)
     {
-        if (empty())
+        if (empty() || is_null())
             set_type<Type::object>();
         return as_object().emplace(std::forward<Args>(args)...);
     }

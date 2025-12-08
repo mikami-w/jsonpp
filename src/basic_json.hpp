@@ -232,7 +232,7 @@ namespace JSONpp
          */
 
         /*
-         * accessors for array and object
+         * functions for array and object
          */
         basic_json& operator[](std::size_t index);
         basic_json const& operator[](std::size_t index) const;
@@ -243,8 +243,19 @@ namespace JSONpp
         basic_json const& operator[](std::string const& key) const;
         basic_json& at(std::string const& key);
         basic_json const& at(std::string const& key) const;
+
+        void push_back(basic_json&& val);
+        void push_back(basic_json const& val);
+        template <typename... Args>
+        void emplace_back(Args&&... args);
+
+        auto insert(std::pair<string, basic_json> const& pair);
+        auto insert(std::pair<string, basic_json>&& pair);
+        template <typename... Args>
+        auto emplace(Args&&... args);
+
         /*
-         * end accessors for array and object
+         * end functions for array and object
          */
 
         bool operator==(basic_json const& other) const;

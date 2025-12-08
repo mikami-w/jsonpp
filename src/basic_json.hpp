@@ -239,15 +239,15 @@ namespace JSONpp
         basic_json& at(std::size_t);
         basic_json const& at(std::size_t) const;
 
+        void push_back(basic_json&& val);
+        void push_back(basic_json const& val);
+        template <typename... Args>
+        basic_json& emplace_back(Args&&... args);
+
         basic_json& operator[](std::string const& key);
         basic_json const& operator[](std::string const& key) const;
         basic_json& at(std::string const& key);
         basic_json const& at(std::string const& key) const;
-
-        void push_back(basic_json&& val);
-        void push_back(basic_json const& val);
-        template <typename... Args>
-        void emplace_back(Args&&... args);
 
         auto insert(std::pair<string, basic_json> const& pair);
         auto insert(std::pair<string, basic_json>&& pair);

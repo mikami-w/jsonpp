@@ -253,6 +253,7 @@ namespace JSONpp
         auto insert(std::pair<string, basic_json>&& pair);
         template <typename... Args>
         auto emplace(Args&&... args);
+        bool contains(std::string const& key) const;
 
         /*
          * end functions for array and object

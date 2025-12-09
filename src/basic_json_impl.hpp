@@ -209,6 +209,15 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
+    bool BASIC_JSON_TYPE::contains(std::string const& key) const
+    {
+        if (!is_object())
+            return false;
+        auto& obj = as_object();
+        return obj.find(key) != obj.end();
+    }
+
+    BASIC_JSON_TEMPLATE
     bool BASIC_JSON_TYPE::operator==(BASIC_JSON_TYPE const& other) const
     {
         if (value.index() != other.value.index()) return false;

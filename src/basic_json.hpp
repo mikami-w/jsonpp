@@ -38,18 +38,17 @@ namespace JSONpp
     private:
         using _test_object_type = ObjectType<StringType, int>;
         static constexpr bool _is_map_like =
-            traits::details_t::has_key_compare<_test_object_type>::value;
+            traits::details_t::has_key_compare_v<_test_object_type>;
         static constexpr bool _is_unordered_map_like =
-            traits::details_t::has_hasher<_test_object_type>::value;
+            traits::details_t::has_hasher_v<_test_object_type>;
         using _object_allocator_t = AllocatorType<std::pair<const StringType, basic_json>>;
 
         template <bool IsMapLike, bool IsUnorderedMapLike, typename Dummy = void>
         struct _object_type_selector
         {
-            // assume it only needs K, V, Allocator (non-standard container)
+            // assume it only needs K, V (non-standard container)
             using type = ObjectType<StringType,
-                                   basic_json,
-                                   _object_allocator_t>;
+                                    basic_json>;
         };
 
         template <typename Dummy>
@@ -238,7 +237,6 @@ namespace JSONpp
         basic_json const& operator[](std::size_t index) const;
         basic_json& at(std::size_t);
         basic_json const& at(std::size_t) const;
-
         void push_back(basic_json&& val);
         void push_back(basic_json const& val);
         template <typename... Args>
@@ -248,7 +246,6 @@ namespace JSONpp
         basic_json const& operator[](std::string const& key) const;
         basic_json& at(std::string const& key);
         basic_json const& at(std::string const& key) const;
-
         auto insert(std::pair<string, basic_json> const& pair);
         auto insert(std::pair<string, basic_json>&& pair);
         template <typename... Args>
@@ -265,13 +262,13 @@ namespace JSONpp
         static basic_json parse(std::string_view json_doc);
         static basic_json parse(std::istream& json_istream);
         template <typename StreamT,
-            std::enable_if_t<traits::isJsonStream_v<StreamT>, int> = 0>
+            std::enable_if_t<traits::is_json_stream_v<StreamT>, int> = 0>
         static basic_json parse(StreamT& stream);
 
         void dump(std::string& buffer) const;
         void dump(std::ostream& os) const;
         template <typename SerializeHandlerT,
-            std::enable_if_t<traits::isJsonSerializeHandler_v<SerializeHandlerT>, int> = 0>
+            std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int> = 0>
         void dump(SerializeHandlerT& handler);
 
         // friend std::ostream& operator<<(std::ostream& os, basic_json const& val);

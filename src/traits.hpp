@@ -10,10 +10,10 @@ namespace JSONpp::traits
     namespace details_t
     {
         template <typename T, typename = void>
-        struct isJsonStreamImpl: std::false_type {};
+        struct is_json_stream_impl: std::false_type {};
 
         template <typename T>
-        struct isJsonStreamImpl<T, std::void_t<
+        struct is_json_stream_impl<T, std::void_t<
             decltype(std::declval<T>().peek()),
             decltype(std::declval<T>().advance()),
             decltype(std::declval<T>().tell_pos()),
@@ -47,53 +47,59 @@ namespace JSONpp::traits
         template <typename T>
         struct has_key_compare<T, std::void_t<typename T::key_compare>>: std::true_type {};
 
+        template <typename T>
+        inline constexpr bool has_key_compare_v = has_key_compare<T>::value;
+
         // trait for std::unordered_map
         template <typename T, typename = void>
         struct has_hasher: std::false_type {};
 
         template <typename T>
         struct has_hasher<T, std::void_t<typename T::hasher>>: std::true_type {};
+
+        template <typename T>
+        inline constexpr bool has_hasher_v = has_hasher<T>::value;
     }
 
     template <typename T>
-    struct isJsonStream: details_t::isJsonStreamImpl<T> {};
+    struct is_json_stream: details_t::is_json_stream_impl<T> {};
 
     template <typename T>
-    inline constexpr bool isJsonStream_v = isJsonStream<T>::value;
+    inline constexpr bool is_json_stream_v = is_json_stream<T>::value;
 
     // Is the stream capable of directly obtaining its complete size
     template <typename T, typename = void>
-    struct isSizedStream: std::false_type {};
+    struct is_sized_stream: std::false_type {};
 
     template <typename T>
-    struct isSizedStream<T, std::void_t<decltype(std::declval<T>().size())>>
+    struct is_sized_stream<T, std::void_t<decltype(std::declval<T>().size())>>
         : std::true_type {};
 
     template <typename T>
-    inline constexpr bool isSizedStream_v = isSizedStream<T>::value;
+    inline constexpr bool is_sized_stream_v = is_sized_stream<T>::value;
 
     // Is the stream a seekable stream (provides seek capability)
     template <typename T, typename = void>
-    struct isSeekableStream: std::false_type {};
+    struct is_seekable_stream: std::false_type {};
 
     template <typename T>
-    struct isSeekableStream<T,
-        std::enable_if_t<isSizedStream_v<T>,
+    struct is_seekable_stream<T,
+        std::enable_if_t<is_sized_stream_v<T>,
         std::void_t<
             decltype(std::declval<T>().seek(std::size_t()))
     >>>
         : std::true_type {};
 
     template <typename T>
-    inline constexpr bool isSeekableStream_v = isSeekableStream<T>::value;
+    inline constexpr bool is_seekable_stream_v = is_seekable_stream<T>::value;
 
     // Is the stream a contiguous stream (provides chunk access capability)
     template <typename T, typename = void>
-    struct isContiguousStream : std::false_type {};
+    struct is_contiguous_stream : std::false_type {};
 
     template <typename T>
-    struct isContiguousStream<T,
-        std::enable_if_t<isSeekableStream_v<T>,
+    struct is_contiguous_stream<T,
+        std::enable_if_t<is_seekable_stream_v<T>,
         std::void_t<
             decltype(std::declval<T>().get_chunk(std::size_t(), std::size_t())),
             decltype(std::declval<T&>().read_chunk_until(std::declval<details_t::PredicateFunctor>()))
@@ -101,14 +107,14 @@ namespace JSONpp::traits
         : std::true_type {};
 
     template <typename T>
-    inline constexpr bool isContiguousStream_v = isContiguousStream<T>::value;
+    inline constexpr bool is_contiguous_stream_v = is_contiguous_stream<T>::value;
 
     // trait for JSON Serialize Handler
     template <typename T, typename = void>
-    struct isJsonSerializeHandler : std::false_type {};
+    struct is_json_serialize_handler : std::false_type {};
 
     template <typename T>
-    struct isJsonSerializeHandler<T, std::void_t<
+    struct is_json_serialize_handler<T, std::void_t<
         decltype(std::declval<T>().append(char())),
         decltype(std::declval<T>().append(std::string_view())),
         decltype(std::declval<T>().append((char const*)0, std::size_t()))
@@ -116,7 +122,7 @@ namespace JSONpp::traits
         : std::true_type {};
 
     template <typename T>
-    inline constexpr bool isJsonSerializeHandler_v = isJsonSerializeHandler<T>::value;
+    inline constexpr bool is_json_serialize_handler_v = is_json_serialize_handler<T>::value;
 }
 
 #endif //JSONPP_STREAM_TRAITS_HPP

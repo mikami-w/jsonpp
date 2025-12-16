@@ -250,7 +250,7 @@ namespace JSONpp
      */
     BASIC_JSON_TEMPLATE
     template <typename StreamT,
-        std::enable_if_t<traits::isJsonStream_v<StreamT>, int>>
+        std::enable_if_t<traits::is_json_stream_v<StreamT>, int>>
     BASIC_JSON_TYPE BASIC_JSON_TYPE::parse(StreamT& stream)
     {
         return details::Parser<StreamT, basic_json>(stream).parse();
@@ -276,7 +276,7 @@ namespace JSONpp
 
     BASIC_JSON_TEMPLATE
     template <typename SerializeHandlerT,
-        std::enable_if_t<traits::isJsonSerializeHandler_v<SerializeHandlerT>, int>>
+        std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int>>
     void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler)
     {
         details::JsonSerializer<basic_json, SerializeHandlerT> serializer(handler);

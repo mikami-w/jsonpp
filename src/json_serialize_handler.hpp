@@ -5,62 +5,60 @@
 #include <string_view>
 #include <ostream>
 
-namespace JSONpp
+namespace JSONpp::details
 {
-    namespace details
+    class StringSerializeHandler
     {
-        class StringSerializeHandler
+        std::string& buffer;
+
+    public:
+        explicit StringSerializeHandler(std::string& buf): buffer(buf) {}
+
+        void append(char ch)
         {
-            std::string& buffer;
+            buffer.push_back(ch);
+        }
 
-        public:
-            explicit StringSerializeHandler(std::string& buf): buffer(buf) {}
-
-            void append(char ch)
-            {
-                buffer.push_back(ch);
-            }
-
-            void append(std::string_view str)
-            {
-                buffer.append(str);
-            }
-
-            void append(char const* cstr, std::size_t length)
-            {
-                buffer.append(cstr, length);
-            }
-        };
-
-        class OStreamSerializeHandler
+        void append(std::string_view str)
         {
-            std::ostream& out;
+            buffer.append(str);
+        }
 
-        public:
-            explicit OStreamSerializeHandler(std::ostream& os): out(os) {}
+        void append(char const* cstr, std::size_t length)
+        {
+            buffer.append(cstr, length);
+        }
+    };
 
-            void append(char ch)
-            {
-                out.put(ch);
-            }
+    class OStreamSerializeHandler
+    {
+        std::ostream& out;
 
-            void append(std::string_view str)
-            {
-                out.write(str.data(), str.size());
-            }
+    public:
+        explicit OStreamSerializeHandler(std::ostream& os): out(os) {}
 
-            void append(char const* cstr, std::size_t length)
-            {
-                out.write(cstr, length);
-            }
+        void append(char ch)
+        {
+            out.put(ch);
+        }
 
-            bool bad() const
-            {
-                return out.bad();
-            }
-        };
+        void append(std::string_view str)
+        {
+            out.write(str.data(), str.size());
+        }
 
-    }
+        void append(char const* cstr, std::size_t length)
+        {
+            out.write(cstr, length);
+        }
+
+        bool bad() const
+        {
+            return out.bad();
+        }
+    };
+
 }
+
 
 #endif //JSONPP_JSON_SERIALIZE_HANDLER_HPP

@@ -41,24 +41,89 @@ namespace JSONpp::traits
         };
 
         // trait for std::map
-        template <typename T, typename = void>
-        struct has_key_compare: std::false_type {};
+        template <
+            template <typename... Args> class MapT,
+            typename = void
+        >
+        struct is_std_map_like: std::false_type {};
 
-        template <typename T>
-        struct has_key_compare<T, std::void_t<typename T::key_compare>>: std::true_type {};
+        template <template <typename K, typename V, typename Compare, typename Alloc> class MapT>
+        struct is_std_map_like<MapT,
+            std::void_t<typename MapT<std::string,
+                                      int,
+                                      std::less<std::string>,
+                                      std::allocator<std::pair<std::string const, int>>
+                                     >::key_compare
+        >>: std::true_type {};
 
-        template <typename T>
-        inline constexpr bool has_key_compare_v = has_key_compare<T>::value;
+        template <template <typename... Args> class MapT>
+        inline constexpr bool is_std_map_like_v = is_std_map_like<MapT>::value;
 
         // trait for std::unordered_map
-        template <typename T, typename = void>
+        template <
+            template <typename... Args> class MapT,
+            typename = void
+        >
+        struct is_std_unordered_map_like: std::false_type {};
+
+        template <template <typename K, typename V, typename Hash, typename Pred, typename Alloc> class MapT>
+        struct is_std_unordered_map_like<MapT,
+            std::void_t<typename MapT<std::string,
+                                      int,
+                                      std::hash<std::string>,
+                                      std::equal_to<std::string>,
+                                      std::allocator<std::pair<std::string const, int>>
+                                     >::hasher
+        >>: std::true_type {};
+
+        template <template <typename... Args> class MapT>
+        inline constexpr bool is_std_unordered_map_like_v = is_std_unordered_map_like<MapT>::value;
+
+        // trait for non-standard map containers with 3 template parameters (Key, Value, Allocator)
+        template <
+            template <typename... Args> class MapT,
+            typename = void>
+        struct is_k_v_alloc_like: std::false_type {};
+
+        template <typename MapT, typename Comp, typename = void>
+        struct has_compare: std::false_type {};
+
+        template <typename MapT, typename Comp>
+        struct has_compare<MapT, Comp, std::void_t<typename MapT::compare>>: std::is_same<Comp, typename MapT::compare> {};
+
+        template <typename MapT, typename Comp>
+        inline constexpr bool has_compare_v = has_compare<MapT, Comp>::value;
+
+        template <typename MapT, typename Hasher, typename = void>
         struct has_hasher: std::false_type {};
 
-        template <typename T>
-        struct has_hasher<T, std::void_t<typename T::hasher>>: std::true_type {};
+        template <typename MapT, typename Hasher>
+        struct has_hasher<MapT, Hasher, std::void_t<typename MapT::hasher>>: std::is_same<Hasher, typename MapT::hasher> {};
 
-        template <typename T>
-        inline constexpr bool has_hasher_v = has_hasher<T>::value;
+        template <typename MapT, typename Hasher>
+        inline constexpr bool has_hasher_v = has_hasher<MapT, Hasher>::value;
+
+        template <template <typename K, typename V, typename Alloc> class MapT>
+        struct is_k_v_alloc_like<MapT,
+            std::void_t<MapT<std::string,
+                             int,
+                             std::allocator<std::pair<std::string const, int>>
+        >>>
+        {
+            // using allocator_t = std::allocator<std::pair<std::string const, int>>;
+            struct allocator_t {};
+            using map_t = MapT<std::string,
+                               int,
+                               std::allocator<std::pair<std::string const, int>>>;
+            // Check if the 3rd template parameter is indeed the allocator type
+            static constexpr bool value = std::is_same_v<allocator_t, typename map_t::allocator_type>
+                || (has_compare_v<map_t, allocator_t> && has_hasher_v<map_t, allocator_t>);
+            // The first condition checks if the 3rd template parameter is the allocator_type member, if so, then it's properly an allocator
+            // The second condition is to avoid false positives for containers that have a 3rd template parameter but not an allocator
+        };
+
+        template <template <typename... Args> class MapT>
+        inline constexpr bool is_k_v_alloc_like_v = is_k_v_alloc_like<MapT>::value;
     }
 
     template <typename T>

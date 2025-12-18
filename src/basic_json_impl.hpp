@@ -14,21 +14,21 @@ namespace JSONpp
     void BASIC_JSON_TYPE::set_type_impl()
     {
         if constexpr (T == Type::empty)
-            value.template emplace<std::monostate>();
+            m_value.template emplace<std::monostate>();
         else if constexpr (T == Type::null)
-            value.template emplace<null_t>();
+            m_value.template emplace<null_t>();
         else if constexpr (T == Type::object)
-            value.template emplace<object>();
+            m_value.template emplace<object>();
         else if constexpr (T == Type::array)
-            value.template emplace<array>();
+            m_value.template emplace<array>();
         else if constexpr (T == Type::string)
-            value.template emplace<string>();
+            m_value.template emplace<string>();
         else if constexpr (T == Type::boolean)
-            value.template emplace<boolean>(false);
+            m_value.template emplace<boolean>(false);
         else if constexpr (T == Type::number_int)
-            value.template emplace<number_int>(0);
+            m_value.template emplace<number_int>(0);
         else if constexpr (T == Type::number_float)
-            value.template emplace<number_float>(0.0);
+            m_value.template emplace<number_float>(0.0);
     }
 
     BASIC_JSON_TEMPLATE
@@ -220,8 +220,8 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     bool BASIC_JSON_TYPE::operator==(BASIC_JSON_TYPE const& other) const
     {
-        if (value.index() != other.value.index()) return false;
-        return value == other.value;
+        if (m_value.index() != other.m_value.index()) return false;
+        return m_value == other.m_value;
     }
 
     /*

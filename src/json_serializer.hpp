@@ -174,7 +174,7 @@ namespace JSONpp::details
                         }
                         sh.append('}');
                     }
-                }, json.value
+                }, json.m_value
             );
         }
     }; // class JsonSerializer

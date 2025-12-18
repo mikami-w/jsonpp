@@ -67,8 +67,8 @@ namespace JSONpp
             using string = typename JsonT::string;
 
         private:
-            string result;
-            std::size_t start;
+            string m_result;
+            std::size_t m_start;
 
             enum class UCPStatus: std::uint8_t // Unicode Code Point Status
             {
@@ -89,7 +89,7 @@ namespace JSONpp
             void unescape_character();
 
         public:
-            JSONStringParser(StreamT& stream, std::size_t _start): ParserBase<StreamT>(stream), result(), start(_start) {}
+            JSONStringParser(StreamT& stream, std::size_t _start): ParserBase<StreamT>(stream), m_result(), m_start(_start) {}
             string parse();
 
         };
@@ -101,7 +101,7 @@ namespace JSONpp
             char num_buf[4];
             for (int i = 0; i < 4; ++i)
                 num_buf[i] = advance();
-            JSONPP_CHECK_EOF_("string", start);
+            JSONPP_CHECK_EOF_("string", m_start);
 
             auto [ptr, ec] = std::from_chars(num_buf, num_buf + 4, value, 16);
             if (ec == std::errc() && ptr == num_buf + 4)
@@ -124,28 +124,28 @@ namespace JSONpp
             if (codepoint <= 0x7F)
             {
                 // ASCII, 0b0xxxxxxx
-                result += static_cast<char>(codepoint);
+                m_result += static_cast<char>(codepoint);
             }
             else if (codepoint <= 0x7FF)
             {
                 // 2-byte UTF-8, 0b110xxxxx 0b10xxxxxx
-                result += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
-                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+                m_result += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+                m_result += static_cast<char>(0x80 | (codepoint & 0x3F));
             }
             else if (codepoint <= 0xFFFF)
             {
                 // 3-byte UTF-8, 0b1110xxxx 0b10xxxxxx 0b10xxxxxx
-                result += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
-                result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+                m_result += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+                m_result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                m_result += static_cast<char>(0x80 | (codepoint & 0x3F));
             }
             else if (codepoint <= 0x10FFFF)
             {
                 // 4-byte UTF-8, 0b11110xxx 0b10xxxxxx 0b10xxxxxx 0b10xxxxxx
-                result += static_cast<char>(0xF0 | (codepoint >> 18));
-                result += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
-                result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+                m_result += static_cast<char>(0xF0 | (codepoint >> 18));
+                m_result += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+                m_result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                m_result += static_cast<char>(0x80 | (codepoint & 0x3F));
             }
         }
 
@@ -161,14 +161,14 @@ namespace JSONpp
         {
             switch (peek())
             {
-            case '\"': result += '\"'; advance(); break;
-            case '\\': result += '\\'; advance(); break;
-            case '/': result += '/'; advance(); break;
-            case 'b': result += '\b'; advance(); break;
-            case 'f': result += '\f'; advance(); break;
-            case 'n': result += '\n'; advance(); break;
-            case 'r': result += '\r'; advance(); break;
-            case 't': result += '\t'; advance(); break;
+            case '\"': m_result += '\"'; advance(); break;
+            case '\\': m_result += '\\'; advance(); break;
+            case '/': m_result += '/'; advance(); break;
+            case 'b': m_result += '\b'; advance(); break;
+            case 'f': m_result += '\f'; advance(); break;
+            case 'n': m_result += '\n'; advance(); break;
+            case 'r': m_result += '\r'; advance(); break;
+            case 't': m_result += '\t'; advance(); break;
             case 'u':
                 {
                     auto upos = tell_pos();
@@ -209,7 +209,7 @@ namespace JSONpp
 
             if constexpr (is_sized_stream_v<StreamT>)
             { // 如果能直接得到整个流的大小则直接预留空间
-                result.reserve(size());
+                m_result.reserve(size());
             }
 
             while (!eof())
@@ -222,8 +222,8 @@ namespace JSONpp
                     });
 
                     if (!chunk.empty())
-                        result.append(chunk);
-                    JSONPP_CHECK_EOF_("string", start);
+                        m_result.append(chunk);
+                    JSONPP_CHECK_EOF_("string", m_start);
                 }
                 // 下面检查为什么停下
 
@@ -242,14 +242,14 @@ namespace JSONpp
                 else
                 {
                     // 只有 IStreamStream 会在这里命中好字符, StringViewStream 已经在 chunk 中处理了它们
-                    result += ch;
+                    m_result += ch;
                     advance();
                 }
             }
-            JSONPP_CHECK_EOF_("string", start);
+            JSONPP_CHECK_EOF_("string", m_start);
 
             advance(); // 跳过右引号
-            return std::move(result);
+            return std::move(m_result);
         }
         /*
          * end JSONStringParser
@@ -272,7 +272,7 @@ namespace JSONpp
             using object = typename JsonT::object;
 
         private:
-            int nesting_depth;
+            int m_nesting_depth;
 
             static bool is_whitespace(char ch) noexcept;
 
@@ -295,7 +295,7 @@ namespace JSONpp
         public:
             Parser() = delete;
 
-            explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream), nesting_depth(0) {}
+            explicit Parser(StreamT& stream) : ParserBase<StreamT>(stream), m_nesting_depth(0) {}
 
             JsonT parse();
         };
@@ -433,7 +433,7 @@ namespace JSONpp
         JsonT Parser<StreamT, JsonT>::parse_array()
         {
             // Increase nesting depth counter and check limit
-            if (++nesting_depth > MAX_NESTING_DEPTH)
+            if (++m_nesting_depth > MAX_NESTING_DEPTH)
                 throw JsonDepthLimitExceeded(tell_pos());
 
             array arr;
@@ -463,7 +463,7 @@ namespace JSONpp
             JSONPP_CHECK_EOF_("array", start);
 
             advance(); // 跳过右 ]
-            --nesting_depth; // Decrease nesting depth counter before returning
+            --m_nesting_depth; // Decrease nesting depth counter before returning
             return {arr};
         }
 
@@ -471,7 +471,7 @@ namespace JSONpp
         JsonT Parser<StreamT, JsonT>::parse_object()
         {
             // Increase nesting depth counter and check limit
-            if (++nesting_depth > MAX_NESTING_DEPTH)
+            if (++m_nesting_depth > MAX_NESTING_DEPTH)
                 throw JsonDepthLimitExceeded(tell_pos());
 
             object obj;
@@ -517,7 +517,7 @@ namespace JSONpp
             JSONPP_CHECK_EOF_("object", start);
 
             advance(); // 跳过右 }
-            --nesting_depth; // Decrease nesting depth counter before returning
+            --m_nesting_depth; // Decrease nesting depth counter before returning
             return {obj};
         }
 

@@ -9,52 +9,52 @@ namespace JSONpp::details
 {
     class StringSerializeHandler
     {
-        std::string& buffer;
+        std::string& m_buffer;
 
     public:
-        explicit StringSerializeHandler(std::string& buf): buffer(buf) {}
+        explicit StringSerializeHandler(std::string& buf): m_buffer(buf) {}
 
         void append(char ch)
         {
-            buffer.push_back(ch);
+            m_buffer.push_back(ch);
         }
 
         void append(std::string_view str)
         {
-            buffer.append(str);
+            m_buffer.append(str);
         }
 
         void append(char const* cstr, std::size_t length)
         {
-            buffer.append(cstr, length);
+            m_buffer.append(cstr, length);
         }
     };
 
     class OStreamSerializeHandler
     {
-        std::ostream& out;
+        std::ostream& m_out;
 
     public:
-        explicit OStreamSerializeHandler(std::ostream& os): out(os) {}
+        explicit OStreamSerializeHandler(std::ostream& os): m_out(os) {}
 
         void append(char ch)
         {
-            out.put(ch);
+            m_out.put(ch);
         }
 
         void append(std::string_view str)
         {
-            out.write(str.data(), str.size());
+            m_out.write(str.data(), str.size());
         }
 
         void append(char const* cstr, std::size_t length)
         {
-            out.write(cstr, length);
+            m_out.write(cstr, length);
         }
 
         bool bad() const
         {
-            return out.bad();
+            return m_out.bad();
         }
     };
 

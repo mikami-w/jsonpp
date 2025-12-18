@@ -13,62 +13,62 @@ namespace JSONpp
     {
         class StringViewStream
         {
-            std::string_view data;
-            std::size_t pos;
+            std::string_view m_data;
+            std::size_t m_pos;
 
         public:
-            int peek() const noexcept { if (pos < data.size()) return static_cast<unsigned char>(data[pos]); else return EOF; } // To ensure that 255 is correctly handled
-            int advance() noexcept { if (pos < data.size()) return static_cast<unsigned char>(data[pos++]); else return EOF; }
-            std::size_t tell_pos() const noexcept { return pos; }
-            bool eof() const noexcept { return pos >= data.size(); }
+            int peek() const noexcept { if (m_pos < m_data.size()) return static_cast<unsigned char>(m_data[m_pos]); else return EOF; } // To ensure that 255 is correctly handled
+            int advance() noexcept { if (m_pos < m_data.size()) return static_cast<unsigned char>(m_data[m_pos++]); else return EOF; }
+            std::size_t tell_pos() const noexcept { return m_pos; }
+            bool eof() const noexcept { return m_pos >= m_data.size(); }
 
-            std::size_t size() const noexcept { return data.size(); }
+            std::size_t size() const noexcept { return m_data.size(); }
 
             void seek(std::size_t step) noexcept
             {
-                assert(pos + step <= data.size() && "StringViewStream::seek out of bounds!");
-                pos += step;
+                assert(m_pos + step <= m_data.size() && "StringViewStream::seek out of bounds!");
+                m_pos += step;
             }
 
             std::string_view get_chunk(std::size_t begin, std::size_t length) const noexcept
             {
-                assert(begin <= data.size() && "StringViewStream::get_chunk invalid begin!");
-                return data.substr(begin, length);
+                assert(begin <= m_data.size() && "StringViewStream::get_chunk invalid begin!");
+                return m_data.substr(begin, length);
             }
 
             template <typename FunctorT>
             std::string_view read_chunk_until(FunctorT predicate) &
             {
-                std::string_view remaining = data.substr(pos);
+                std::string_view remaining = m_data.substr(m_pos);
                 auto it = std::find_if(remaining.begin(), remaining.end(), predicate);
                 auto chunk_size = std::distance(remaining.begin(), it);
                 // Get chunk (if chunk_size=0, return empty view)
-                std::string_view chunk = data.substr(pos, chunk_size);
+                std::string_view chunk = m_data.substr(m_pos, chunk_size);
 
-                pos += chunk_size;
+                m_pos += chunk_size;
 
                 return chunk;
             }
-            explicit StringViewStream(std::string_view doc): data(doc), pos(0) {}
+            explicit StringViewStream(std::string_view doc): m_data(doc), m_pos(0) {}
         };
 
         class IStreamStream
         {
-            std::istream& is;
-            std::size_t pos;
+            std::istream& m_is;
+            std::size_t m_pos;
         public:
-            int peek() const { return is.peek(); }
+            int peek() const { return m_is.peek(); }
             int advance()
             {
-                auto c = is.get();
+                auto c = m_is.get();
                 if (c != EOF)
-                    ++pos;
+                    ++m_pos;
                 return c;
             }
-            std::size_t tell_pos() const noexcept { return pos; }
-            bool eof() const { return is.peek() == EOF; }
+            std::size_t tell_pos() const noexcept { return m_pos; }
+            bool eof() const { return m_is.peek() == EOF; }
 
-            explicit IStreamStream(std::istream& _is): is(_is), pos(0) { is.unsetf(std::ios::skipws); }
+            explicit IStreamStream(std::istream& _is): m_is(_is), m_pos(0) { m_is.unsetf(std::ios::skipws); }
         };
     }
 }

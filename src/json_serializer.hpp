@@ -24,7 +24,7 @@ namespace JSONpp::details
         using array = typename JsonT::array;
         using object = typename JsonT::object;
 
-        SerializeHandlerT& sh;
+        SerializeHandlerT& m_sh;
 
         static bool needs_escaping(char ch)
         {
@@ -36,13 +36,13 @@ namespace JSONpp::details
         }
 
     public:
-        explicit JsonSerializer(SerializeHandlerT& handler) : sh(handler) {}
+        explicit JsonSerializer(SerializeHandlerT& handler) : m_sh(handler) {}
 
         template <typename StringT>
         void escape_string(StringT const& str) // escape v.转义 e.g. \ -> \\, " -> \"
         {
             std::string_view sv(std::data(str), std::size(str));
-            sh.append('\"');
+            m_sh.append('\"');
             auto chunkBegin = sv.begin();
             auto const end = sv.end();
             while (chunkBegin < end)
@@ -51,7 +51,7 @@ namespace JSONpp::details
                 auto chunkLength = badChar - chunkBegin;
                 if (chunkLength > 0)
                 {
-                    sh.append(std::addressof(*chunkBegin), chunkLength); // 第一个参数应当为指针而不是迭代器, 尽管部分实现中迭代器底层直接使用指针
+                    m_sh.append(std::addressof(*chunkBegin), chunkLength); // 第一个参数应当为指针而不是迭代器, 尽管部分实现中迭代器底层直接使用指针
                 }
                 chunkBegin = badChar + 1; // 跳过当前已经写入流的块, 等同于 chunkBegin += chunkLength + 1
 
@@ -62,33 +62,33 @@ namespace JSONpp::details
                 char ch = *badChar;
                 switch (ch)
                 {
-                case '\"': sh.append("\\\"", 2);
+                case '\"': m_sh.append("\\\"", 2);
                     break;
-                case '\\': sh.append("\\\\", 2);
+                case '\\': m_sh.append("\\\\", 2);
                     break;
 #ifdef ESCAPE_FORWARD_SLASH
-                case '/': sh.append("\\/", 2); break;
+                case '/': m_sh.append("\\/", 2); break;
 #endif
-                case '\b': sh.append("\\b", 2);
+                case '\b': m_sh.append("\\b", 2);
                     break; // \x08
-                case '\f': sh.append("\\f", 2);
+                case '\f': m_sh.append("\\f", 2);
                     break; // \x0C
-                case '\n': sh.append("\\n", 2);
+                case '\n': m_sh.append("\\n", 2);
                     break; // \x0A
-                case '\r': sh.append("\\r", 2);
+                case '\r': m_sh.append("\\r", 2);
                     break; // \x0D
-                case '\t': sh.append("\\t", 2);
+                case '\t': m_sh.append("\\t", 2);
                     break; // \x09
                 default:
                     {
                         char buf[7]{};
                         std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned short>(ch));
-                        sh.append(buf, 6); // \uXXXX一定是6字符
+                        m_sh.append(buf, 6); // \uXXXX一定是6字符
                         break;
                     }
                 }
             }
-            sh.append('\"');
+            m_sh.append('\"');
         }
 
         void dump(JsonT const& json)
@@ -100,32 +100,32 @@ namespace JSONpp::details
                     if constexpr (std::is_same_v<T, std::monostate>)
                         return; // empty basic_json
                     if constexpr (std::is_same_v<T, null_t>)
-                        sh.append("null", 4);
+                        m_sh.append("null", 4);
                     if constexpr (std::is_same_v<T, boolean>)
                     {
-                        if (v) sh.append("true", 4);
-                        else sh.append("false", 5);
+                        if (v) m_sh.append("true", 4);
+                        else m_sh.append("false", 5);
                     }
                     if constexpr (std::is_same_v<T, number_int>)
                     {
                         constexpr size_t MAX_INT_CHARS = 32;
                         char cbuf[MAX_INT_CHARS];
                         auto result = std::to_chars(cbuf, cbuf + sizeof(cbuf), v);
-                        sh.append(cbuf, result.ptr - cbuf);
+                        m_sh.append(cbuf, result.ptr - cbuf);
                     }
                     if constexpr (std::is_same_v<T, number_float>)
                     {
                         constexpr size_t MAX_DOUBLE_CHARS = 64;
                         char cbuf[MAX_DOUBLE_CHARS];
                         auto result = std::to_chars(cbuf, cbuf + sizeof(cbuf), v, std::chars_format::general);
-                        sh.append(cbuf, result.ptr - cbuf);
+                        m_sh.append(cbuf, result.ptr - cbuf);
 
                         std::string_view written(cbuf, result.ptr - cbuf);
                         if (written.find('.') == std::string_view::npos &&
                             written.find('e') == std::string_view::npos &&
                             written.find('E') == std::string_view::npos)
                         {
-                            sh.append(".0", 2); // ensure that float numbers have a decimal part
+                            m_sh.append(".0", 2); // ensure that float numbers have a decimal part
                         }
                     }
                     if constexpr (std::is_same_v<T, string>)
@@ -135,7 +135,7 @@ namespace JSONpp::details
                     if constexpr (std::is_same_v<T, array>)
                     {
                         bool first = true;
-                        sh.append('[');
+                        m_sh.append('[');
                         for (auto const& item : v)
                         {
                             if (first)
@@ -145,34 +145,34 @@ namespace JSONpp::details
                             }
                             else
                             {
-                                sh.append(',');
+                                m_sh.append(',');
                                 dump(item);
                             }
                         }
-                        sh.append(']');
+                        m_sh.append(']');
                     }
                     if constexpr (std::is_same_v<T, object>)
                     {
                         bool first = true;
-                        sh.append('{');
+                        m_sh.append('{');
                         for (auto const& item : v)
                         {
                             if (first)
                             {
                                 first = false;
                                 escape_string(item.first);
-                                sh.append(':');
+                                m_sh.append(':');
                                 dump(item.second);
                             }
                             else
                             {
-                                sh.append(',');
+                                m_sh.append(',');
                                 escape_string(item.first);
-                                sh.append(':');
+                                m_sh.append(':');
                                 dump(item.second);
                             }
                         }
-                        sh.append('}');
+                        m_sh.append('}');
                     }
                 }, json.m_value
             );

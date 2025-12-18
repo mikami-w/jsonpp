@@ -142,12 +142,12 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    template <typename ... Args>
-    void BASIC_JSON_TYPE::emplace_back(Args&&... args)
+    template <typename... Args>
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::emplace_back(Args&&... args)
     {
         if (empty() || is_null())
             set_type<Type::array>();
-        as_array().emplace_back(std::forward<Args>(args)...);
+        return as_array().emplace_back(std::forward<Args>(args)...);
     }
 
     BASIC_JSON_TEMPLATE
@@ -200,7 +200,7 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    template <typename ... Args>
+    template <typename... Args>
     auto BASIC_JSON_TYPE::emplace(Args&&... args)
     {
         if (empty() || is_null())
@@ -281,6 +281,14 @@ namespace JSONpp
     {
         details::JsonSerializer<basic_json, SerializeHandlerT> serializer(handler);
         serializer.dump(*this);
+    }
+
+    BASIC_JSON_TEMPLATE
+    std::string BASIC_JSON_TYPE::stringify() const
+    {
+        std::string buffer;
+        dump(buffer);
+        return buffer;
     }
 
     /*

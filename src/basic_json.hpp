@@ -35,6 +35,9 @@ namespace JSONpp
     BASIC_JSON_TEMPLATE
     class basic_json : public std::conditional_t<std::is_same_v<CustomBaseClass, void>, details::EmptyBaseClass, CustomBaseClass>
     {
+        // =============================================================
+        // * Internal Helper Types
+        // =============================================================
     private:
         static constexpr bool _is_k_v_alloc_like =
             traits::details_t::is_k_v_alloc_like_v<ObjectType>;
@@ -85,6 +88,9 @@ namespace JSONpp
         template <bool IsMapLike, bool IsUnorderedMapLike, bool IsKVAllocLike>
         using _object_type_selector_t = typename _object_type_selector<IsMapLike, IsUnorderedMapLike, IsKVAllocLike>::type;
 
+        // =============================================================
+        //  * Public Types & Aliases
+        // =============================================================
     public:
         using boolean = BooleanType;
         using number_int = NumberIntegerType;
@@ -92,7 +98,7 @@ namespace JSONpp
         using string = StringType;
         using array = ArrayType<basic_json, AllocatorType<basic_json>>;
         using object = _object_type_selector_t<_is_map_like, _is_unordered_map_like, _is_k_v_alloc_like>;
-
+        using json_t = BASIC_JSON_TYPE;
         using value_t = std::variant <
             std::monostate,
             null_t,
@@ -104,7 +110,21 @@ namespace JSONpp
             object
         >;
 
-        using json_t = BASIC_JSON_TYPE;
+        // Iterator Support
+        using iterator = null_t;
+        using const_iterator = null_t;
+        using reverse_iterator = std::reverse_iterator<iterator>;
+        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+        // [STL Compatibility] Standard container aliases
+        using value_type = BASIC_JSON_TYPE;
+        using allocator_type = AllocatorType<BASIC_JSON_TYPE>;
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using reference = BASIC_JSON_TYPE&;
+        using const_reference = BASIC_JSON_TYPE const&;
+        using pointer = BASIC_JSON_TYPE*;
+        using const_pointer = BASIC_JSON_TYPE const*;
 
         template <typename T>
         constexpr static bool is_json_value_type =
@@ -120,33 +140,24 @@ namespace JSONpp
             std::is_same_v<T, array> ||
             std::is_same_v<T, object>;
 
+        // =============================================================
+        //  * Lifecycle (Constructors, Destructor, Assignment)
+        // =============================================================
     public:
-        /*
-         * Constructors, Destructor & Assignment (Lifecycle)
-         */
-        // Type constructors
         basic_json() = default;
-        basic_json(null_t): value(null_t()) {}
-        explicit basic_json(boolean val): value(val) {}
+        ~basic_json() = default;
+
+        // Type constructors
         basic_json(null_t): m_value(null_t()) {}
         explicit basic_json(boolean val): m_value(val) {}
         // Constructor for integral types (including char, which will be treated as an integer)
         template <typename T_Integer,
             std::enable_if_t<std::is_integral_v<T_Integer>, int> = 0>
-        basic_json(T_Integer val): value(val) {}
-        basic_json(number_int val): value(val) {}
         basic_json(T_Integer val): m_value(val) {}
         basic_json(number_int val): m_value(val) {}
         // Constructor for floating-point types
         template <typename T_Float,
             std::enable_if_t<std::is_floating_point_v<T_Float>, int> = 0>
-        basic_json(T_Float val): value(val) {}
-        basic_json(number_float val): value(val) {}
-        basic_json(string val): value(std::move(val)) {}
-        basic_json(char const* val): value(val) {}
-        explicit basic_json(std::string_view val): value(string(val)) {} // Explicit to prevent expensive, implicit copies from a non-owning string_view.
-        basic_json(array val): value(std::move(val)) {}
-        basic_json(object val): value(std::move(val)) {}
         basic_json(T_Float val): m_value(val) {}
         basic_json(number_float val): m_value(val) {}
         basic_json(string val): m_value(std::move(val)) {}
@@ -167,33 +178,155 @@ namespace JSONpp
                             !std::is_same_v<std::decay_t<T>, basic_json>, int> = 0>
         basic_json& operator=(T&& val) { m_value = std::forward<T>(val); return *this; }
 
-        ~basic_json() = default;
-        /*
-         * end constructors and destructor
-         */
+        // =============================================================
+        //  * Capacity & Property (查询状态)
+        //  (新增：size, max_size, capacity, reserve, shrink_to_fit)
+        // =============================================================
+    public:
         Type type() const noexcept { return static_cast<Type>(m_value.index()); }
 
         template <Type T>
         void set_type(bool clear_content = false);
         void set_type(Type const& t, bool clear_content = false);
 
-        Type type() const noexcept { return static_cast<Type>(value.index()); }
-        bool empty() const noexcept { return std::holds_alternative<std::monostate>(value); }
-        bool is_null() const noexcept { return std::holds_alternative<null_t>(value); }
-        bool is_bool() const noexcept { return std::holds_alternative<boolean>(value); }
-        bool is_number() const noexcept { return std::holds_alternative<number_int>(value) || std::holds_alternative<number_float>(value); }
-        bool is_int() const noexcept { return std::holds_alternative<number_int>(value); }
-        bool is_float() const noexcept { return std::holds_alternative<number_float>(value); }
-        bool is_string() const noexcept { return std::holds_alternative<string>(value); }
-        bool is_array() const noexcept { return std::holds_alternative<array>(value); }
-        bool is_object() const noexcept { return std::holds_alternative<object>(value); }
-        /*
-         * end type checkers
-         */
+        // State Checkers
+        bool empty() const noexcept { return std::holds_alternative<std::monostate>(m_value); }
+        size_type size() const noexcept;       // [New]
+        size_type max_size() const noexcept;   // [New]
+        size_type capacity() const;            // [New] (Array only)
 
-        /*
-         * safe accessors
-         */
+        // Capacity Modifiers (虽是修改，但归类于容量更直观)
+        void reserve(size_type new_cap);       // [New] (Array/Object)
+        void shrink_to_fit();                  // [New] (Array/String)
+
+        // Type Predicates
+        bool is_null() const noexcept { return std::holds_alternative<null_t>(m_value); }
+        bool is_bool() const noexcept { return std::holds_alternative<boolean>(m_value); }
+        bool is_number() const noexcept { return std::holds_alternative<number_int>(m_value) || std::holds_alternative<number_float>(m_value); }
+        bool is_int() const noexcept { return std::holds_alternative<number_int>(m_value); }
+        bool is_float() const noexcept { return std::holds_alternative<number_float>(m_value); }
+        bool is_string() const noexcept { return std::holds_alternative<string>(m_value); }
+        bool is_array() const noexcept { return std::holds_alternative<array>(m_value); }
+        bool is_object() const noexcept { return std::holds_alternative<object>(m_value); }
+
+        // =============================================================
+        //  * Element Access (获取数据)
+        //  (新增：front, back, value)
+        // =============================================================
+    public:
+        // Array access
+        basic_json& operator[](std::size_t index);
+        basic_json const& operator[](std::size_t index) const;
+        basic_json& at(std::size_t);
+        basic_json const& at(std::size_t) const;
+        // Object access
+        basic_json& operator[](std::string const& key);
+        basic_json const& operator[](std::string const& key) const;
+        basic_json& at(std::string const& key);
+        basic_json const& at(std::string const& key) const;
+
+        // [New] Front & Back (Array only)
+        reference front();
+        const_reference front() const;
+        reference back();
+        const_reference back() const;
+
+        // [New] Value with Default (Object only)
+        template <typename ValueType>
+        ValueType value(string const& key, ValueType const& default_value) const;
+
+        // =============================================================
+        //  * Lookup (Object 查找)
+        //  (新增：find, count, contains)
+        // =============================================================
+    public:
+        // [New] Find
+        iterator find(string const& key);
+        const_iterator find(string const& key) const;
+
+        // [New] Count & Contains
+        size_type count(string const& key) const;
+        bool contains(string const& key) const;
+
+        // =============================================================
+        //  * Iterators
+        //  (待实现，先占位)
+        // =============================================================
+    public:
+        iterator begin();
+        const_iterator begin() const;
+        const_iterator cbegin() const;
+        iterator end();
+        const_iterator end() const;
+        const_iterator cend() const;
+        reverse_iterator rbegin();
+        const_reverse_iterator rbegin() const;
+        const_reverse_iterator crbegin() const;
+        reverse_iterator rend();
+        const_reverse_iterator rend() const;
+        const_reverse_iterator crend() const;
+
+        // =============================================================
+        //  * Modifiers (修改内容)
+        //  (新增：clear, pop_back, insert, erase, update, resize, swap)
+        // =============================================================
+    public:
+        // General
+        void clear() noexcept;
+        void swap(basic_json& other) noexcept { m_value.swap(other.m_value); }
+        friend void swap(basic_json& lhs, basic_json& rhs) noexcept { lhs.m_value.swap(rhs.m_value); } // for ADL (Argument-Dependent Lookup)
+
+        // Array Modifiers
+        void push_back(basic_json&& val);
+        void push_back(basic_json const& val);
+        template <typename... Args>
+        basic_json& emplace_back(Args&&... args);
+        void pop_back();
+
+        // Resize (Array)
+        void resize(size_type new_size);
+        void resize(size_type new_size, basic_json const& value);
+
+        // Object/Array Insertion
+        // [New] Insert (Range)
+        template <typename InputIt>
+        void insert(InputIt first, InputIt last);
+
+        // [New] Insert (Init List)
+        void insert(std::initializer_list<basic_json> il);
+
+        // [New] Insert (Pair - Existing but improved signatures?)
+        auto insert(std::pair<string, basic_json> const& pair);
+        auto insert(std::pair<string, basic_json>&& pair);
+
+        // [New] Insert at pos (Array) - Blocked until iterator ready
+        iterator insert(const_iterator pos, basic_json const& val);
+
+        // Emplace (Object)
+        template <typename... Args>
+        auto emplace(Args&&... args);
+        template <typename... Args>
+        std::pair<iterator, bool> try_emplace(string const& key, Args&&... args);
+
+        // Object/Array Erasure
+        // [New] Erase by Key
+        size_type erase(string const& key);
+        // [New] Erase by Index
+        void erase(size_type index);
+        // [New] Erase by Iterator - Blocked
+        iterator erase(const_iterator pos);
+        iterator erase(const_iterator first, const_iterator last);
+
+        // Object Merge
+        // [New] Update
+        void update(basic_json const& other, bool merge_objects = false);
+        void update(const_iterator first, const_iterator last, bool merge_objects = false);
+
+        // =============================================================
+        //  * Conversions (类型转换)
+        // =============================================================
+    public:
+        // Pointers (Safe)
         boolean const* get_if_bool() const noexcept { return std::get_if<boolean>(&m_value); }
         boolean* get_if_bool() noexcept { return std::get_if<boolean>(&m_value); }
 
@@ -211,13 +344,8 @@ namespace JSONpp
 
         object const* get_if_object() const noexcept { return std::get_if<object>(&m_value); }
         object* get_if_object() noexcept { return std::get_if<object>(&m_value); }
-        /*
-         * end safe accessors
-         */
 
-        /*
-         * asserted accessors
-         */
+        // References (Asserted)
         boolean as_bool() const { return as_impl<boolean>(m_value, "bool"); }
         boolean& as_bool() { return as_impl<boolean>(m_value, "bool"); }
 
@@ -233,35 +361,13 @@ namespace JSONpp
         array const& as_array() const { return as_impl<array>(m_value, "array"); }
         array& as_array() { return as_impl<array>(m_value, "array"); }
 
-        object const& as_object() const { return as_impl<object>(value, "object"); }
-        object& as_object() { return as_impl<object>(value, "object"); }
-        /*
-         * end asserted accessors
-         */
         object const& as_object() const { return as_impl<object>(m_value, "object"); }
         object& as_object() { return as_impl<object>(m_value, "object"); }
 
-        // Array access
-        basic_json& operator[](std::size_t index);
-        basic_json const& operator[](std::size_t index) const;
-        basic_json& at(std::size_t);
-        basic_json const& at(std::size_t) const;
-        void push_back(basic_json&& val);
-        void push_back(basic_json const& val);
-        template <typename... Args>
-        basic_json& emplace_back(Args&&... args);
-
-        // Object access
-        basic_json& operator[](std::string const& key);
-        basic_json const& operator[](std::string const& key) const;
-        basic_json& at(std::string const& key);
-        basic_json const& at(std::string const& key) const;
-        auto insert(std::pair<string, basic_json> const& pair);
-        auto insert(std::pair<string, basic_json>&& pair);
-        template <typename... Args>
-        auto emplace(Args&&... args);
-        bool contains(std::string const& key) const;
-
+        // =============================================================
+        //  * Operators & Serialization
+        // =============================================================
+    public:
         bool operator==(basic_json const& other) const;
         bool operator!=(basic_json const& other) const { return !(*this == other); }
 
@@ -277,10 +383,11 @@ namespace JSONpp
             std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int> = 0>
         void dump(SerializeHandlerT& handler);
 
-        // friend std::ostream& operator<<(std::ostream& os, basic_json const& val);
-
         std::string stringify() const;
 
+        // =============================================================
+        //  * Private Implementation
+        // =============================================================
     private:
         template <typename JsonT, typename SerializeHandlerT>
         friend class details::JsonSerializer;
@@ -289,6 +396,13 @@ namespace JSONpp
         value_t m_value;
 
     private:
+        // [To Implement] 必须存储 Allocator 实例，否则无法支持 Stateful Allocator
+        // [[no_unique_address]] AllocatorType m_allocator = AllocatorType();
+
+        // [新增] 统一的内部容器创建函数 (建议实现)
+        template <typename ContainerType>
+        void create_container();
+
         template <Type T>
         void set_type_impl();
 

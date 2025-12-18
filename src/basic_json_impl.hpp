@@ -126,31 +126,6 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    void BASIC_JSON_TYPE::push_back(BASIC_JSON_TYPE&& val)
-    {
-        if (empty() || is_null())
-            set_type<Type::array>();
-        as_array().emplace_back(std::move(val));
-    }
-
-    BASIC_JSON_TEMPLATE
-    void BASIC_JSON_TYPE::push_back(BASIC_JSON_TYPE const& val)
-    {
-        if (empty() || is_null())
-            set_type<Type::array>();
-        as_array().emplace_back(val);
-    }
-
-    BASIC_JSON_TEMPLATE
-    template <typename... Args>
-    BASIC_JSON_TYPE& BASIC_JSON_TYPE::emplace_back(Args&&... args)
-    {
-        if (empty() || is_null())
-            set_type<Type::array>();
-        return as_array().emplace_back(std::forward<Args>(args)...);
-    }
-
-    BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::string const& key)
     {
         if (empty() || is_null())
@@ -184,6 +159,40 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
+    bool BASIC_JSON_TYPE::contains(string const& key) const
+    {
+        if (!is_object())
+            return false;
+        auto& obj = as_object();
+        return obj.find(key) != obj.end();
+    }
+
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::push_back(BASIC_JSON_TYPE&& val)
+    {
+        if (empty() || is_null())
+            set_type<Type::array>();
+        as_array().emplace_back(std::move(val));
+    }
+
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::push_back(BASIC_JSON_TYPE const& val)
+    {
+        if (empty() || is_null())
+            set_type<Type::array>();
+        as_array().emplace_back(val);
+    }
+
+    BASIC_JSON_TEMPLATE
+    template <typename... Args>
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::emplace_back(Args&&... args)
+    {
+        if (empty() || is_null())
+            set_type<Type::array>();
+        return as_array().emplace_back(std::forward<Args>(args)...);
+    }
+
+    BASIC_JSON_TEMPLATE
     auto BASIC_JSON_TYPE::insert(std::pair<string, basic_json> const& pair)
     {
         if (empty() || is_null())
@@ -206,15 +215,6 @@ namespace JSONpp
         if (empty() || is_null())
             set_type<Type::object>();
         return as_object().emplace(std::forward<Args>(args)...);
-    }
-
-    BASIC_JSON_TEMPLATE
-    bool BASIC_JSON_TYPE::contains(std::string const& key) const
-    {
-        if (!is_object())
-            return false;
-        auto& obj = as_object();
-        return obj.find(key) != obj.end();
     }
 
     BASIC_JSON_TEMPLATE

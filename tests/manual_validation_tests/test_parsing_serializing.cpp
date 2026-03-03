@@ -231,7 +231,7 @@ namespace Test
 int main()
 {
     using namespace Test;
-    //std::cout << "JSONpp::isContiguousStream_v<JSONpp::StringViewStream>: " << JSONpp::traits::isContiguousStream_v<JSONpp::StringViewStream> << std::endl;
+    //std::cout << "JSONpp::is_contiguous_stream_v<JSONpp::StringViewStream>: " << JSONpp::traits::is_contiguous_stream_v<JSONpp::StringViewStream> << std::endl;
 
     std::string logpath = "/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log";
     constexpr int choice = 2;

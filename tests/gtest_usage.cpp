@@ -29,9 +29,9 @@ TEST(JsonUsageTest, AssignmentAndTypeSwitching) {
     EXPECT_TRUE(j.is_bool());
     EXPECT_TRUE(j.as_bool());
 
-    // 6. 赋值回 null
-    j = nullptr;
-    EXPECT_TRUE(j.is_null());
+    // 6. 设回 empty
+    j.set_type<Type::empty>();
+    EXPECT_TRUE(j.empty());
 }
 
 // Object manipulation: inserting, modifying, and accessing keys
@@ -62,15 +62,15 @@ TEST(JsonUsageTest, ObjectManipulation) {
     EXPECT_TRUE(j_obj["address"].is_object());
     EXPECT_EQ(j_obj["address"]["city"].as_string(), "Tokyo");
 
-    // 4. const 访问 (如果你保留了 const 重载)
+    // 4. const 访问
     const json j_const = j_obj;
     EXPECT_EQ(j_const.at("name").as_string(), "Mikami");
 }
 
 // Array manipulation: constructing, modifying, and iterating
 TEST(JsonUsageTest, ArrayManipulation) {
-    // 1. 通过 vector 构造
-    std::vector<json> vec = {1, 2, 3};
+    // 1. 构造
+    json::array vec = {1, 2, 3};
     json j_arr = vec;
 
     EXPECT_TRUE(j_arr.is_array());
@@ -86,7 +86,6 @@ TEST(JsonUsageTest, ArrayManipulation) {
     }, JsonOutOfRange);
 
     // 3. 使用底层容器方法 (push_back)
-    // 因为 basic_json 没有直接暴露 push_back，我们需要通过 as_array()
     j_arr.as_array().push_back("new element");
     EXPECT_EQ(j_arr.as_array().size(), 4);
     EXPECT_EQ(j_arr[3].as_string(), "new element");
@@ -94,7 +93,7 @@ TEST(JsonUsageTest, ArrayManipulation) {
     // 4. 遍历测试 (Range-based for)
     int sum = 0;
     // 重新构造一个纯整数组
-    json num_arr = std::vector<json>{10, 20, 30};
+    json num_arr = json::array{10, 20, 30};
     for (auto& item : num_arr.as_array()) {
         sum += item.as_int();
     }
@@ -115,7 +114,7 @@ TEST(JsonUsageTest, CopyAndMove) {
     EXPECT_EQ(j2["key"].as_string(), "modified");
 
     // --- 移动语义测试 ---
-    json j3 = std::vector<json>{1, 2, 3};
+    json j3 = json::array{1, 2, 3};
     json j4 = std::move(j3); // 移动构造
 
     // j4 应该拥有数据
@@ -147,8 +146,8 @@ TEST(JsonUsageTest, EqualityComparison) {
 
     EXPECT_TRUE(o1 == o2);
 
-    json arr1 = std::vector<json>{1, 2};
-    json arr2 = std::vector<json>{1, 2};
+    json arr1 = json::array{1, 2};
+    json arr2 = json::array{1, 2};
     EXPECT_TRUE(arr1 == arr2);
 }
 

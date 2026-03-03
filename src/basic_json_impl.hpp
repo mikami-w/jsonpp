@@ -94,6 +94,7 @@ namespace JSONpp
 
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::size_t index)
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](size_type index)
     {
         return const_cast<basic_json&>(
             static_cast<basic_json const&>(*this).operator[](index)
@@ -101,7 +102,7 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::operator[](std::size_t index) const
+    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::operator[](size_type index) const
     {
         auto const& arr = as_array();
         assert(index < arr.size() && "JSON array index out of range");
@@ -109,7 +110,7 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    BASIC_JSON_TYPE& BASIC_JSON_TYPE::at(std::size_t index)
+    BASIC_JSON_TYPE& BASIC_JSON_TYPE::at(size_type index)
     {
         return const_cast<basic_json&>(
             static_cast<basic_json const&>(*this).at(index)
@@ -117,7 +118,7 @@ namespace JSONpp
     }
 
     BASIC_JSON_TEMPLATE
-    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::at(std::size_t index) const
+    BASIC_JSON_TYPE const& BASIC_JSON_TYPE::at(size_type index) const
     {
         auto const& arr = as_array();
         if (index >= arr.size())

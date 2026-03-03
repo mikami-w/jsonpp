@@ -117,14 +117,14 @@ namespace JSONpp
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         // [STL Compatibility] Standard container aliases
-        using value_type = BASIC_JSON_TYPE;
-        using allocator_type = AllocatorType<BASIC_JSON_TYPE>;
+        using value_type = basic_json;
+        using allocator_type = AllocatorType<value_type>;
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
-        using reference = BASIC_JSON_TYPE&;
-        using const_reference = BASIC_JSON_TYPE const&;
-        using pointer = BASIC_JSON_TYPE*;
-        using const_pointer = BASIC_JSON_TYPE const*;
+        using reference = value_type&;
+        using const_reference = value_type const&;
+        using pointer = value_type*;
+        using const_pointer = value_type const*;
 
         template <typename T>
         constexpr static bool is_json_value_type =
@@ -169,14 +169,14 @@ namespace JSONpp
         // Copy and move
         basic_json(basic_json const& other) = default;
         basic_json(basic_json&& other) noexcept = default;
-        basic_json& operator=(basic_json const& other) = default;
-        basic_json& operator=(basic_json&& other) noexcept = default;
+        reference operator=(basic_json const& other) = default;
+        reference operator=(basic_json&& other) noexcept = default;
 
         // Templated assignment
         template <typename T,
             std::enable_if_t<is_json_value_type<std::decay_t<T>> &&
                             !std::is_same_v<std::decay_t<T>, basic_json>, int> = 0>
-        basic_json& operator=(T&& val) { m_value = std::forward<T>(val); return *this; }
+        reference operator=(T&& val) { m_value = std::forward<T>(val); return *this; }
 
         // =============================================================
         //  * Capacity & Property (查询状态)
@@ -215,15 +215,15 @@ namespace JSONpp
         // =============================================================
     public:
         // Array access
-        basic_json& operator[](std::size_t index);
-        basic_json const& operator[](std::size_t index) const;
-        basic_json& at(std::size_t);
-        basic_json const& at(std::size_t) const;
+        reference operator[](size_type index);
+        value_type const& operator[](size_type index) const;
+        reference at(size_type index);
+        value_type const& at(size_type index) const;
         // Object access
-        basic_json& operator[](std::string const& key);
-        basic_json const& operator[](std::string const& key) const;
-        basic_json& at(std::string const& key);
-        basic_json const& at(std::string const& key) const;
+        reference operator[](std::string const& key);
+        value_type const& operator[](std::string const& key) const;
+        reference at(std::string const& key);
+        value_type const& at(std::string const& key) const;
 
         // [New] Front & Back (Array only)
         reference front();
@@ -273,19 +273,19 @@ namespace JSONpp
     public:
         // General
         void clear() noexcept;
-        void swap(basic_json& other) noexcept { m_value.swap(other.m_value); }
-        friend void swap(basic_json& lhs, basic_json& rhs) noexcept { lhs.m_value.swap(rhs.m_value); } // for ADL (Argument-Dependent Lookup)
+        void swap(reference other) noexcept { m_value.swap(other.m_value); }
+        friend void swap(reference lhs, reference rhs) noexcept { lhs.m_value.swap(rhs.m_value); } // for ADL (Argument-Dependent Lookup)
 
         // Array Modifiers
         void push_back(basic_json&& val);
-        void push_back(basic_json const& val);
+        void push_back(const_reference val);
         template <typename... Args>
-        basic_json& emplace_back(Args&&... args);
+        reference emplace_back(Args&&... args);
         void pop_back();
 
         // Resize (Array)
         void resize(size_type new_size);
-        void resize(size_type new_size, basic_json const& value);
+        void resize(size_type new_size, const_reference value);
 
         // Object/Array Insertion
         // [New] Insert (Range)
@@ -300,7 +300,7 @@ namespace JSONpp
         auto insert(std::pair<string, basic_json>&& pair);
 
         // [New] Insert at pos (Array) - Blocked until iterator ready
-        iterator insert(const_iterator pos, basic_json const& val);
+        iterator insert(const_iterator pos, const_reference val);
 
         // Emplace (Object)
         template <typename... Args>
@@ -319,7 +319,7 @@ namespace JSONpp
 
         // Object Merge
         // [New] Update
-        void update(basic_json const& other, bool merge_objects = false);
+        void update(const_reference other, bool merge_objects = false);
         void update(const_iterator first, const_iterator last, bool merge_objects = false);
 
         // =============================================================
@@ -368,8 +368,8 @@ namespace JSONpp
         //  * Operators & Serialization
         // =============================================================
     public:
-        bool operator==(basic_json const& other) const;
-        bool operator!=(basic_json const& other) const { return !(*this == other); }
+        bool operator==(const_reference other) const;
+        bool operator!=(const_reference other) const { return !(*this == other); }
 
         static basic_json parse(std::string_view json_doc);
         static basic_json parse(std::istream& json_istream);

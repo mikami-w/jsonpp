@@ -7,7 +7,7 @@
 #include "jsonpp.hpp"
 #include "test_utils.hpp"
 
-using namespace JSONpp;
+using namespace jsonpp;
 
 // 测试文件目录常量
 static constexpr char const* kTestFileDir = "../tests/test_cases_roundtrip/";

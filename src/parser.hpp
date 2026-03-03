@@ -27,7 +27,7 @@ limitations under the License.
 #include <charconv>
 #include <cstddef>
 
-namespace JSONpp
+namespace jsonpp
 {
     using namespace traits;
 

@@ -24,7 +24,7 @@ limitations under the License.
 #include <string_view>
 #include <istream>
 
-namespace JSONpp
+namespace jsonpp
 {
     namespace details
     {

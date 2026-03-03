@@ -22,7 +22,7 @@ limitations under the License.
 #include "basic_json.hpp"
 #include "json_serializer.hpp"
 
-namespace JSONpp
+namespace jsonpp
 {
     using namespace traits;
 

@@ -22,7 +22,7 @@ limitations under the License.
 #include <string_view>
 #include <ostream>
 
-namespace JSONpp::details
+namespace jsonpp::details
 {
     class StringSerializeHandler
     {

@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "jsonpp.hpp"
-using namespace JSONpp;
+using namespace jsonpp;
 
 // Basic assignment and type switching
 TEST(JsonUsageTest, AssignmentAndTypeSwitching) {

@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 
 namespace Test
 {
-    using namespace JSONpp;
+    using namespace jsonpp;
     using json_test = unordered_json;
 
     static constexpr char const* testFilePath = "../tests/manual_validation_tests/";
@@ -231,7 +231,7 @@ namespace Test
 int main()
 {
     using namespace Test;
-    //std::cout << "JSONpp::is_contiguous_stream_v<JSONpp::StringViewStream>: " << JSONpp::traits::is_contiguous_stream_v<JSONpp::StringViewStream> << std::endl;
+    //std::cout << "jsonpp::is_contiguous_stream_v<jsonpp::StringViewStream>: " << jsonpp::traits::is_contiguous_stream_v<jsonpp::StringViewStream> << std::endl;
 
     std::string logpath = "/mnt/d/works/jsontests/test_log_" + getDateTimeString() + ".log";
     constexpr int choice = 2;

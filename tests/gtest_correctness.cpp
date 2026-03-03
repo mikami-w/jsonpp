@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "jsonpp.hpp"
 
-using namespace JSONpp;
+using namespace jsonpp;
 
 // 1. 基础字面量与数值测试 (Primitives)
 TEST(CorrectnessTest, Primitives) {

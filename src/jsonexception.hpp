@@ -21,7 +21,7 @@ limitations under the License.
 #include "macro_def.hpp"
 #include <stdexcept>
 
-namespace JSONpp
+namespace jsonpp
 {
     /*
      * JSON exceptions

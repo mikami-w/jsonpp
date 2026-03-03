@@ -30,7 +30,7 @@ limitations under the License.
 #include <type_traits>
 #include <cstdint>
 
-namespace JSONpp
+namespace jsonpp
 {
     namespace details
     {
@@ -440,6 +440,6 @@ namespace JSONpp
     }
 
 
-} // namespace JSONpp
+} // namespace jsonpp
 
 #endif //JSONPP_BASIC_JSON_HPP

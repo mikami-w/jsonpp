@@ -26,7 +26,7 @@ limitations under the License.
 #include <charconv>
 #include <variant>
 
-namespace JSONpp::details
+namespace jsonpp::details
 {
     template <typename JsonT, typename SerializeHandlerT>
     class JsonSerializer

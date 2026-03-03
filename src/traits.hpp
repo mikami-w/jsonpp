@@ -22,7 +22,7 @@ limitations under the License.
 #include <cstddef>
 #include <string_view>
 
-namespace JSONpp::traits
+namespace jsonpp::traits
 {
     namespace details_t
     {

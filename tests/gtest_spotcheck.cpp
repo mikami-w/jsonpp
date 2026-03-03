@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "jsonpp.hpp"
 
-using namespace JSONpp;
+using namespace jsonpp;
 
 // 这是一个针对复杂真实数据的"抽查"测试 (Spot Check)
 // 目的：验证解析后的 C++ 对象结构是否严格符合预期，作为"基准真理" (Ground Truth)

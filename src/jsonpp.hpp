@@ -18,11 +18,11 @@ limitations under the License.
 #ifndef JSONPP_JSONPP_HPP
 #define JSONPP_JSONPP_HPP
 
-#include "macro_def.hpp"
-#include "traits.hpp"
-#include "jsonexception.hpp"
-#include "json_fwd.hpp"
-#include "parser.hpp"
-#include "basic_json_impl.hpp"
+#include "detail/macro_def.hpp"
+#include "detail/traits.hpp"
+#include "detail/jsonexception.hpp"
+#include "detail/json_fwd.hpp"
+#include "detail/parser.hpp"
+#include "detail/basic_json_impl.hpp"
 
 #endif //JSONPP_JSONPP_HPP

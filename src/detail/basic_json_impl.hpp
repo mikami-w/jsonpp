@@ -111,6 +111,31 @@ namespace jsonpp
 
     BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::size_t index)
+    typename BASIC_JSON_TYPE::size_type BASIC_JSON_TYPE::size() const noexcept
+    {
+        switch (type())
+        {
+        case Type::empty:
+        case Type::null:
+            return 0;
+        case Type::boolean:
+        case Type::number_int:
+        case Type::number_float:
+        case Type::string:
+            return 1;
+        case Type::array:
+            return as_array().size();
+        case Type::object:
+            return as_object().size();
+        default:
+#if defined(__GNUC__) || defined(__clang__)
+            __builtin_unreachable();
+#elif defined(_MSC_VER)
+            __assume(0);
+#endif
+        }
+    }
+
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](size_type index)
     {
         return const_cast<basic_json&>(

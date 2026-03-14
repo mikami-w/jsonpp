@@ -56,24 +56,21 @@ namespace jsonpp
         // * Internal Helper Types
         // =============================================================
     private:
-        static constexpr bool _is_k_v_alloc_like =
-            traits::details_t::is_k_v_alloc_like_v<ObjectType>;
-        static constexpr bool _is_map_like =
-            traits::details_t::is_std_map_like_v<ObjectType>;
-        static constexpr bool _is_unordered_map_like =
-            traits::details_t::is_std_unordered_map_like_v<ObjectType>;
+        static constexpr bool _is_std_map =
+            traits::details_t::is_std_map_v<ObjectType>;
+        static constexpr bool _is_std_unordered_map =
+            traits::details_t::is_std_unordered_map_v<ObjectType>;
         using _object_allocator_t = AllocatorType<std::pair<StringType const, basic_json>>;
 
-        template <bool IsMapLike, bool IsUnorderedMapLike, bool IsKVAllocLike, typename Dummy = void>
+        template <bool IsMapLike, bool IsUnorderedMapLike, typename Dummy = void>
         struct _object_type_selector
         {
             // assume it only needs K, V (non-standard container)
-            using type = ObjectType<StringType,
-                                    basic_json>;
+            using type = void;
         };
 
         template <typename Dummy>
-        struct _object_type_selector<false, false, true, Dummy>
+        struct _object_type_selector<false, false, Dummy>
         {
             // assume it's a non-standard map container with 3 template parameters (Key, Value, Allocator)
             using type = ObjectType<StringType,
@@ -82,7 +79,7 @@ namespace jsonpp
         };
 
         template <typename Dummy>
-        struct _object_type_selector<true, false, false, Dummy>
+        struct _object_type_selector<true, false, Dummy>
         {
             // assume it's a std::map-like container
             using type = ObjectType<StringType,
@@ -92,7 +89,7 @@ namespace jsonpp
         };
 
         template <typename Dummy>
-        struct _object_type_selector<false, true, false, Dummy>
+        struct _object_type_selector<false, true, Dummy>
         {
             // assume it's a std::unordered_map-like container
             using type = ObjectType<StringType,
@@ -101,9 +98,6 @@ namespace jsonpp
                                     std::equal_to<StringType>,
                                     _object_allocator_t>;
         };
-
-        template <bool IsMapLike, bool IsUnorderedMapLike, bool IsKVAllocLike>
-        using _object_type_selector_t = typename _object_type_selector<IsMapLike, IsUnorderedMapLike, IsKVAllocLike>::type;
 
         // =============================================================
         //  * Public Types & Aliases
@@ -114,7 +108,7 @@ namespace jsonpp
         using number_float = NumberFloatType;
         using string = StringType;
         using array = ArrayType<basic_json, AllocatorType<basic_json>>;
-        using object = _object_type_selector_t<_is_map_like, _is_unordered_map_like, _is_k_v_alloc_like>;
+        using object = typename _object_type_selector<_is_std_map, _is_std_unordered_map>::type;
         using json_t = BASIC_JSON_TYPE;
         using value_t = std::variant <
             std::monostate,

@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "macro_def.hpp"
 #include <stdexcept>
+#include <string>
 
 namespace jsonpp
 {

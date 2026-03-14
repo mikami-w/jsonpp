@@ -21,6 +21,7 @@ limitations under the License.
 #include <type_traits>
 #include <cstddef>
 #include <string_view>
+#include <functional>
 
 namespace jsonpp::traits
 {

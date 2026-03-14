@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "json_fwd.hpp"
 #include "json_serialize_handler.hpp"
+#include "traits.hpp"
 
 #include <algorithm>
 #include <array>

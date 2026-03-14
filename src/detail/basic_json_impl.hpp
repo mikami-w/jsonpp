@@ -110,7 +110,6 @@ namespace jsonpp
     }
 
     BASIC_JSON_TEMPLATE
-    BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](std::size_t index)
     typename BASIC_JSON_TYPE::size_type BASIC_JSON_TYPE::size() const noexcept
     {
         switch (type())
@@ -136,6 +135,7 @@ namespace jsonpp
         }
     }
 
+    BASIC_JSON_TEMPLATE
     BASIC_JSON_TYPE& BASIC_JSON_TYPE::operator[](size_type index)
     {
         return const_cast<basic_json&>(

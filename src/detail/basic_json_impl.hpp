@@ -300,30 +300,39 @@ namespace jsonpp
     }
 
     BASIC_JSON_TEMPLATE
-    void BASIC_JSON_TYPE::dump(std::string& buffer) const
+    void BASIC_JSON_TYPE::dump(std::string& buffer, bool pretty, std::string_view indent) const
     {
         details::StringSerializeHandler ssh(buffer);
         details::JsonSerializer<basic_json, details::StringSerializeHandler>
             serializer(ssh);
-        serializer.dump(*this);
+        if (pretty)
+            serializer.template dump<true>(*this, indent);
+        else
+            serializer.template dump<false>(*this);
     }
 
     BASIC_JSON_TEMPLATE
-    void BASIC_JSON_TYPE::dump(std::ostream& os) const
+    void BASIC_JSON_TYPE::dump(std::ostream& os, bool pretty, std::string_view indent) const
     {
         details::OStreamSerializeHandler ossh(os);
         details::JsonSerializer<basic_json, details::OStreamSerializeHandler>
             serializer(ossh);
-        serializer.dump(*this);
+        if (pretty)
+            serializer.template dump<true>(*this, indent);
+        else
+            serializer.template dump<false>(*this);
     }
 
     BASIC_JSON_TEMPLATE
     template <typename SerializeHandlerT,
         std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int>>
-    void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler)
+    void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler, bool pretty, std::string_view indent)
     {
         details::JsonSerializer<basic_json, SerializeHandlerT> serializer(handler);
-        serializer.dump(*this);
+        if (pretty)
+            serializer.template dump<true>(*this, indent);
+        else
+            serializer.template dump<false>(*this);
     }
 
     BASIC_JSON_TEMPLATE
@@ -331,6 +340,14 @@ namespace jsonpp
     {
         std::string buffer;
         dump(buffer);
+        return buffer;
+    }
+
+    BASIC_JSON_TEMPLATE
+    std::string BASIC_JSON_TYPE::pretty(std::string_view indent) const
+    {
+        std::string buffer;
+        dump(buffer, true, indent);
         return buffer;
     }
 

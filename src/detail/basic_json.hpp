@@ -388,13 +388,14 @@ namespace jsonpp
             std::enable_if_t<traits::is_json_stream_v<StreamT>, int> = 0>
         static basic_json parse(StreamT& stream);
 
-        void dump(std::string& buffer) const;
-        void dump(std::ostream& os) const;
+        void dump(std::string& buffer, bool pretty = false, std::string_view indent = "\t") const;
+        void dump(std::ostream& os, bool pretty = false, std::string_view indent = "\t") const;
         template <typename SerializeHandlerT,
             std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int> = 0>
-        void dump(SerializeHandlerT& handler);
+        void dump(SerializeHandlerT& handler, bool pretty = false, std::string_view indent = "\t");
 
         std::string stringify() const;
+        std::string pretty(std::string_view indent = "\t") const;
 
         // =============================================================
         //  * Private Implementation

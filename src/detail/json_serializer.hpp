@@ -53,6 +53,15 @@ namespace jsonpp::details
                 ;
         }
 
+        // 用于写入换行和当前的缩进
+        void append_indent(std::string_view indent, int depth)
+        {
+            m_sh.append('\n');
+            for (int i = 0; i < depth; ++i) {
+                m_sh.append(indent);
+            }
+        }
+
     public:
         explicit JsonSerializer(SerializeHandlerT& handler) : m_sh(handler) {}
 
@@ -109,16 +118,19 @@ namespace jsonpp::details
             m_sh.append('\"');
         }
 
-        void dump(JsonT const& json)
+        template <bool Pretty = false>
+        void dump(JsonT const& json, std::string_view indent = "\t", int depth = 0)
         {
-            std::visit([this](auto&& v)
+            std::visit([this, &indent, depth](auto&& v)
                 {
                     using T = std::decay_t<decltype(v)>;
 
                     if constexpr (std::is_same_v<T, std::monostate>)
                         return; // empty basic_json
                     if constexpr (std::is_same_v<T, null_t>)
+                    {
                         m_sh.append("null", 4);
+                    }
                     if constexpr (std::is_same_v<T, boolean>)
                     {
                         if (v) m_sh.append("true", 4);
@@ -154,18 +166,20 @@ namespace jsonpp::details
                     {
                         bool first = true;
                         m_sh.append('[');
-                        for (auto const& item : v)
+                        if (!v.empty())
                         {
-                            if (first)
+                            for (auto const& item : v)
                             {
+                                if (!first)
+                                    m_sh.append(',');
                                 first = false;
-                                dump(item);
+
+                                if constexpr (Pretty)
+                                    append_indent(indent, depth + 1);
+                                dump<Pretty>(item);
                             }
-                            else
-                            {
-                                m_sh.append(',');
-                                dump(item);
-                            }
+                            if constexpr (Pretty)
+                                append_indent(indent, depth);
                         }
                         m_sh.append(']');
                     }
@@ -173,22 +187,25 @@ namespace jsonpp::details
                     {
                         bool first = true;
                         m_sh.append('{');
-                        for (auto const& item : v)
+                        if (!v.empty())
                         {
-                            if (first)
+                            for (auto const& item : v)
                             {
+                                if (!first)
+                                    m_sh.append(',');
                                 first = false;
+
+                                if constexpr (Pretty)
+                                    append_indent(indent, depth + 1);
                                 escape_string(item.first);
-                                m_sh.append(':');
-                                dump(item.second);
+                                if constexpr (Pretty)
+                                    m_sh.append(": ", 2);
+                                else
+                                    m_sh.append(':');
+                                dump<Pretty>(item.second);
                             }
-                            else
-                            {
-                                m_sh.append(',');
-                                escape_string(item.first);
-                                m_sh.append(':');
-                                dump(item.second);
-                            }
+                            if constexpr (Pretty)
+                                append_indent(indent, depth);
                         }
                         m_sh.append('}');
                     }

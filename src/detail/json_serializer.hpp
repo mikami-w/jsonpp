@@ -80,12 +80,11 @@ namespace jsonpp::details
                 {
                     m_sh.append(std::addressof(*chunkBegin), chunkLength); // 第一个参数应当为指针而不是迭代器, 尽管部分实现中迭代器底层直接使用指针
                 }
+                if (badChar == end)
+                    break; // 到达字符串结尾, 停止处理
                 chunkBegin = badChar + 1; // 跳过当前已经写入流的块, 等同于 chunkBegin += chunkLength + 1
 
                 // 下面处理转义
-                if (badChar == end)
-                    break;
-
                 char ch = *badChar;
                 switch (ch)
                 {

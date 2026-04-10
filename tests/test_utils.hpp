@@ -5,6 +5,11 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <sstream>
+#include <chrono>
+#include <iomanip>
+#include <unordered_map>
+#include <utility>
 
 namespace fs = std::filesystem;
 using TestDirectoryEntries = std::unordered_map<std::string, std::vector<fs::directory_entry>>;

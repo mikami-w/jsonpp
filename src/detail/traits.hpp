@@ -135,9 +135,9 @@ namespace jsonpp::traits
 
     template <typename T>
     struct is_json_serialize_handler<T, std::void_t<
-        decltype(std::declval<T>().append(char())),
-        decltype(std::declval<T>().append(std::string_view())),
-        decltype(std::declval<T>().append((char const*)0, std::size_t()))
+        decltype(std::declval<T>().append(std::declval<char>())),
+        decltype(std::declval<T>().append(std::declval<std::string_view>())),
+        decltype(std::declval<T>().append(std::declval<char const*>(), std::declval<std::size_t>()))
     >>
         : std::true_type {};
 

@@ -48,7 +48,7 @@ namespace Test
                 if (dir.path().filename().string() == "JSONTestSuite") continue;
                 for (auto& file: fs::directory_iterator(dir))
                 {
-                    entries[dir.path().filename()].push_back(file);
+                    entries[dir.path().filename().string()].push_back(file);
                 }
             }
             for (auto& [key, vec] : entries)

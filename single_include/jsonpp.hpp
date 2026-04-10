@@ -219,9 +219,9 @@ namespace jsonpp::traits
 
     template <typename T>
     struct is_json_serialize_handler<T, std::void_t<
-        decltype(std::declval<T>().append(char())),
-        decltype(std::declval<T>().append(std::string_view())),
-        decltype(std::declval<T>().append((char const*)0, std::size_t()))
+        decltype(std::declval<T>().append(std::declval<char>())),
+        decltype(std::declval<T>().append(std::declval<std::string_view>())),
+        decltype(std::declval<T>().append(std::declval<char const*>(), std::declval<std::size_t>()))
     >>
         : std::true_type {};
 
@@ -1113,7 +1113,7 @@ namespace jsonpp
         void dump(std::ostream& os, bool pretty = false, std::string_view indent = "\t") const;
         template <typename SerializeHandlerT,
             std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int> = 0>
-        void dump(SerializeHandlerT& handler, bool pretty = false, std::string_view indent = "\t");
+        void dump(SerializeHandlerT& handler, bool pretty = false, std::string_view indent = "\t") const;
 
         std::string stringify() const;
         std::string pretty(std::string_view indent = "\t") const;
@@ -2042,7 +2042,7 @@ namespace jsonpp
     BASIC_JSON_TEMPLATE
     template <typename SerializeHandlerT,
         std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int>>
-    void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler, bool pretty, std::string_view indent)
+    void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler, bool pretty, std::string_view indent) const
     {
         details::JsonSerializer<basic_json, SerializeHandlerT> serializer(handler);
         if (pretty)

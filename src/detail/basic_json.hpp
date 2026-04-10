@@ -392,7 +392,7 @@ namespace jsonpp
         void dump(std::ostream& os, bool pretty = false, std::string_view indent = "\t") const;
         template <typename SerializeHandlerT,
             std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int> = 0>
-        void dump(SerializeHandlerT& handler, bool pretty = false, std::string_view indent = "\t");
+        void dump(SerializeHandlerT& handler, bool pretty = false, std::string_view indent = "\t") const;
 
         std::string stringify() const;
         std::string pretty(std::string_view indent = "\t") const;

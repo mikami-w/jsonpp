@@ -326,7 +326,7 @@ namespace jsonpp
     BASIC_JSON_TEMPLATE
     template <typename SerializeHandlerT,
         std::enable_if_t<traits::is_json_serialize_handler_v<SerializeHandlerT>, int>>
-    void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler, bool pretty, std::string_view indent)
+    void BASIC_JSON_TYPE::dump(SerializeHandlerT& handler, bool pretty, std::string_view indent) const
     {
         details::JsonSerializer<basic_json, SerializeHandlerT> serializer(handler);
         if (pretty)

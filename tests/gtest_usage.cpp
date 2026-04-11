@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <set>
+
 #include "jsonpp.hpp"
 using namespace jsonpp;
 
@@ -299,4 +301,95 @@ TEST(JsonUsageTest, ADLSwap) {
 
     EXPECT_EQ(j1.as_int(), 20);
     EXPECT_EQ(j2.as_int(), 10);
+}
+
+TEST(JsonIteratorTest, EmptyValueIsEmptyRange) {
+    json j;
+
+    EXPECT_EQ(j.begin(), j.end());
+
+    int count = 0;
+    for (auto& ignored : j) {
+        (void)ignored;
+        ++count;
+    }
+    EXPECT_EQ(count, 0);
+}
+
+TEST(JsonIteratorTest, NullAndScalarAreSingleElementRanges) {
+    json j_null = nullptr;
+    int null_count = 0;
+    for (auto& item : j_null) {
+        EXPECT_TRUE(item.is_null());
+        ++null_count;
+    }
+    EXPECT_EQ(null_count, 1);
+
+    json j_num = 42;
+    int sum = 0;
+    for (auto& item : j_num) {
+        sum += item.as_int();
+    }
+    EXPECT_EQ(sum, 42);
+
+    json j_str = "x";
+    int str_count = 0;
+    for (auto& item : j_str) {
+        EXPECT_EQ(item.as_string(), "x");
+        ++str_count;
+    }
+    EXPECT_EQ(str_count, 1);
+}
+
+TEST(JsonIteratorTest, ArrayIterationOnJsonValue) {
+    json arr = json::array{10, 20, 30};
+
+    int sum = 0;
+    for (auto& item : arr) {
+        sum += item.as_int();
+    }
+    EXPECT_EQ(sum, 60);
+}
+
+TEST(JsonIteratorTest, ObjectIterationSupportsKeyAccess) {
+    json obj;
+    obj["a"] = 1;
+    obj["b"] = 2;
+
+    std::set<std::string> keys;
+    int sum = 0;
+    for (auto it = obj.begin(); it != obj.end(); ++it) {
+        keys.insert(it.key());
+        sum += it->as_int();
+    }
+
+    EXPECT_EQ(keys, (std::set<std::string>{"a", "b"}));
+    EXPECT_EQ(sum, 3);
+}
+
+TEST(JsonIteratorTest, FindAndCountThrowOnNonObject) {
+    json scalar = 100;
+
+    EXPECT_THROW({
+        auto it = scalar.find("x");
+        (void)it;
+    }, JsonTypeError);
+
+    EXPECT_THROW({
+        auto c = scalar.count("x");
+        (void)c;
+    }, JsonTypeError);
+}
+
+TEST(JsonIteratorTest, FindAndCountWorkOnObject) {
+    json obj;
+    obj["name"] = "jsonpp";
+
+    auto it = obj.find("name");
+    ASSERT_NE(it, obj.end());
+    EXPECT_EQ(it.key(), "name");
+    EXPECT_EQ(it->as_string(), "jsonpp");
+
+    EXPECT_EQ(obj.count("name"), 1);
+    EXPECT_EQ(obj.count("missing"), 0);
 }

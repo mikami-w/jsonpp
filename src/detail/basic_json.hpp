@@ -19,12 +19,14 @@ limitations under the License.
 #define JSONPP_BASIC_JSON_HPP
 
 #include "json_fwd.hpp"
+#include "json_iterator.hpp"
 #include "json_serializer.hpp"
 #include "jsonexception.hpp"
 #include "json_stream_adaptor.hpp"
 #include "macro_def.hpp"
 #include "traits.hpp"
 
+#include <iterator>
 #include <string>
 #include <variant>
 #include <type_traits>
@@ -122,8 +124,8 @@ namespace jsonpp
         >;
 
         // Iterator Support
-        using iterator = null_t;
-        using const_iterator = null_t;
+        using iterator = details::JsonIterator<basic_json, false>;
+        using const_iterator = details::JsonIterator<basic_json, true>;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 

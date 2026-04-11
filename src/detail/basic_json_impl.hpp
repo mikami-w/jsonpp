@@ -72,7 +72,7 @@ namespace jsonpp
         }
         catch (const std::bad_variant_access&)
         {
-            throw JsonTypeError(std::string("Value is not a ") + typeName);
+            throw JsonTypeError(std::string("Value is not a(an) ") + typeName);
         }
     }
 
@@ -115,8 +115,8 @@ namespace jsonpp
         switch (type())
         {
         case Type::empty:
-        case Type::null:
             return 0;
+        case Type::null:
         case Type::boolean:
         case Type::number_int:
         case Type::number_float:
@@ -202,10 +202,189 @@ namespace jsonpp
     }
 
     BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::iterator BASIC_JSON_TYPE::begin()
+    {
+        switch (type())
+        {
+        case Type::empty:
+            return iterator::make_empty(this);
+        case Type::null:
+        case Type::boolean:
+        case Type::number_int:
+        case Type::number_float:
+        case Type::string:
+            return iterator::make_scalar(this, false);
+        case Type::array:
+            return iterator::make_array(this, as_array().begin());
+        case Type::object:
+            return iterator::make_object(this, as_object().begin());
+        default:
+#if defined(__GNUC__) || defined(__clang__)
+            __builtin_unreachable();
+#elif defined(_MSC_VER)
+            __assume(0);
+#endif
+        }
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_iterator BASIC_JSON_TYPE::begin() const
+    {
+        switch (type())
+        {
+        case Type::empty:
+            return const_iterator::make_empty(this);
+        case Type::null:
+        case Type::boolean:
+        case Type::number_int:
+        case Type::number_float:
+        case Type::string:
+            return const_iterator::make_scalar(this, false);
+        case Type::array:
+            return const_iterator::make_array(this, as_array().begin());
+        case Type::object:
+            return const_iterator::make_object(this, as_object().begin());
+        default:
+#if defined(__GNUC__) || defined(__clang__)
+            __builtin_unreachable();
+#elif defined(_MSC_VER)
+            __assume(0);
+#endif
+        }
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_iterator BASIC_JSON_TYPE::cbegin() const
+    {
+        return begin();
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::iterator BASIC_JSON_TYPE::end()
+    {
+        switch (type())
+        {
+        case Type::empty:
+            return iterator::make_empty(this);
+        case Type::null:
+        case Type::boolean:
+        case Type::number_int:
+        case Type::number_float:
+        case Type::string:
+            return iterator::make_scalar(this, true);
+        case Type::array:
+            return iterator::make_array(this, as_array().end());
+        case Type::object:
+            return iterator::make_object(this, as_object().end());
+        default:
+#if defined(__GNUC__) || defined(__clang__)
+            __builtin_unreachable();
+#elif defined(_MSC_VER)
+            __assume(0);
+#endif
+        }
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_iterator BASIC_JSON_TYPE::end() const
+    {
+        switch (type())
+        {
+        case Type::empty:
+            return const_iterator::make_empty(this);
+        case Type::null:
+        case Type::boolean:
+        case Type::number_int:
+        case Type::number_float:
+        case Type::string:
+            return const_iterator::make_scalar(this, true);
+        case Type::array:
+            return const_iterator::make_array(this, as_array().end());
+        case Type::object:
+            return const_iterator::make_object(this, as_object().end());
+        default:
+#if defined(__GNUC__) || defined(__clang__)
+            __builtin_unreachable();
+#elif defined(_MSC_VER)
+            __assume(0);
+#endif
+        }
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_iterator BASIC_JSON_TYPE::cend() const
+    {
+        return end();
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::reverse_iterator BASIC_JSON_TYPE::rbegin()
+    {
+        static_assert(iterator::supports_reverse,
+                      "reverse iteration requires both array and object iterators to be bidirectional");
+        return reverse_iterator(end());
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_reverse_iterator BASIC_JSON_TYPE::rbegin() const
+    {
+        static_assert(const_iterator::supports_reverse,
+                      "reverse iteration requires both array and object iterators to be bidirectional");
+        return const_reverse_iterator(end());
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_reverse_iterator BASIC_JSON_TYPE::crbegin() const
+    {
+        return rbegin();
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::reverse_iterator BASIC_JSON_TYPE::rend()
+    {
+        static_assert(iterator::supports_reverse,
+                      "reverse iteration requires both array and object iterators to be bidirectional");
+        return reverse_iterator(begin());
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_reverse_iterator BASIC_JSON_TYPE::rend() const
+    {
+        static_assert(const_iterator::supports_reverse,
+                      "reverse iteration requires both array and object iterators to be bidirectional");
+        return const_reverse_iterator(begin());
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_reverse_iterator BASIC_JSON_TYPE::crend() const
+    {
+        return rend();
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::iterator BASIC_JSON_TYPE::find(string const& key)
+    {
+        auto& obj = as_object();
+        return iterator::make_object(this, obj.find(key));
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::const_iterator BASIC_JSON_TYPE::find(string const& key) const
+    {
+        auto const& obj = as_object();
+        return const_iterator::make_object(this, obj.find(key));
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::size_type BASIC_JSON_TYPE::count(string const& key) const
+    {
+        auto const& obj = as_object();
+        return obj.find(key) == obj.end() ? 0 : 1;
+    }
+
+    BASIC_JSON_TEMPLATE
     bool BASIC_JSON_TYPE::contains(string const& key) const
     {
-        if (!is_object())
-            return false;
         auto& obj = as_object();
         return obj.find(key) != obj.end();
     }

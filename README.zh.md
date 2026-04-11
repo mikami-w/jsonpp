@@ -130,7 +130,8 @@ target_include_directories(my_app PRIVATE /path/to/jsonpp/src)
 ### 访问与类型转换
 
 - 数组访问：`operator[](size_t)`、`at(size_t)`。
-- 对象访问：`operator[](const std::string&)`、`at(const std::string&)`、`contains(const std::string&)`。
+- 对象访问：`operator[](const std::string&)`、`at(const std::string&)`。
+- 对象查找：`find(const std::string&)`、`count(const std::string&)`、`contains(const std::string&)`。
 - 安全指针接口：`get_if_bool/int/float/string/array/object()`。
 - 受检转换接口：`as_bool/int/float/string/array/object()`。
 
@@ -139,11 +140,25 @@ target_include_directories(my_app PRIVATE /path/to/jsonpp/src)
 - `operator[](size_t)` 在调试构建中使用内部断言进行边界检查；若需要抛异常的受检访问，请使用 `at(size_t)`。
 - 非 const 的 `operator[](const std::string&)` 在值为 empty/null 时会先转换为 object 再插入键值。
 - const 的 `operator[](const std::string&)` 会委托给 `at(...)`，键不存在时抛异常。
+- `find/count/contains` 仅适用于 object；在非 object 上会抛出 `JsonTypeError`。
+
+### 迭代器
+
+- 已支持：`begin/end/cbegin/cend/rbegin/rend/crbegin/crend`。
+- 按类型的迭代语义：
+	- `empty`：空区间
+	- `null/bool/int/float/string`：单元素区间
+	- `array`：遍历数组元素
+	- `object`：遍历 value（JSON 引用），key 可通过 `it.key()` 获取
+- 反向迭代在底层 array/object 迭代器均支持双向遍历时可用。
 
 ### 修改接口
 
 - 数组：`push_back(...)`、`emplace_back(...)`。
 - 对象：`insert(std::pair<string, json>)`、`emplace(...)`。
+- 数组按位置插入：`insert(const_iterator pos, const json&)`。
+- 擦除：`erase(const std::string&)`、`erase(size_t)`、`erase(const_iterator)`、`erase(const_iterator, const_iterator)`。
+- 合并更新：`update(const json&, merge_objects)`、`update(const_iterator, const_iterator, merge_objects)`。
 - 交换：`swap(...)` 与 ADL `swap`。
 
 ### 解析与输出
@@ -242,8 +257,8 @@ try {
 
 以下能力目前在头文件中有声明，但在 v0.1.4 尚未完全实现：
 
-- 完整迭代器支持（`begin/end/rbegin/...`）及基于迭代器的修改接口。
-- 若干 STL 风格辅助/修改接口，如 `max_size`、`capacity`、`reserve`、`shrink_to_fit`、`front`、`back`、`value`、`find`、`count`、`resize`、`erase`、`update` 以及部分 `insert` 重载。
+- 若干 STL 风格辅助/修改接口，如 `max_size`、`capacity`、`reserve`、`shrink_to_fit`、`front`、`back`、`value`、`clear`、`pop_back`、`resize`、`insert(InputIt, InputIt)`、`insert(initializer_list)`、`try_emplace`。
+- 基于迭代器的修改接口为“部分实现”：核心 `insert/erase/update` 路径已可用，部分已声明重载仍待补齐。
 - `basic_json` 中对有状态分配器实例的持有。
 - 代码注释中标记的扩展点（如 ADL serializer 定制、binary type 支持）。
 

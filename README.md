@@ -124,7 +124,8 @@ This section lists APIs that are implemented in the current codebase.
 ### Access and conversion
 
 - Array access: `operator[](size_t)`, `at(size_t)`.
-- Object access: `operator[](const std::string&)`, `at(const std::string&)`, `contains(const std::string&)`.
+- Object access: `operator[](const std::string&)`, `at(const std::string&)`.
+- Object lookup: `find(const std::string&)`, `count(const std::string&)`, `contains(const std::string&)`.
 - Safe pointers: `get_if_bool/int/float/string/array/object()`.
 - Checked conversion: `as_bool/int/float/string/array/object()`.
 
@@ -133,11 +134,25 @@ Behavior notes:
 - `operator[](size_t)` uses an internal assertion for bounds checking in debug builds; use `at(size_t)` when you need checked access with exceptions.
 - Non-const `operator[](const std::string&)` converts an empty/null value to an object before insertion.
 - Const `operator[](const std::string&)` delegates to `at(...)` and throws if the key does not exist.
+- `find/count/contains` are object-only and throw `JsonTypeError` for non-object values.
+
+### Iteration
+
+- Iterators: `begin/end/cbegin/cend/rbegin/rend/crbegin/crend`.
+- Type-dependent range behavior:
+	- `empty` => empty range
+	- `null/bool/int/float/string` => single-element range
+	- `array` => iterate array elements
+	- `object` => iterate values (JSON references), object key is available via `it.key()`
+- Reverse iteration is available when both underlying array/object iterators support bidirectional traversal.
 
 ### Mutation
 
 - `push_back(...)`, `emplace_back(...)` for arrays.
 - `insert(std::pair<string, json>)`, `emplace(...)` for objects.
+- `insert(const_iterator pos, const json&)` for arrays.
+- `erase(const std::string&)`, `erase(size_t)`, `erase(const_iterator)`, `erase(const_iterator, const_iterator)`.
+- `update(const json&, merge_objects)`, `update(const_iterator, const_iterator, merge_objects)`.
 - `swap(...)` and ADL `swap`.
 
 ### Parse and dump
@@ -232,8 +247,8 @@ try {
 
 The following are currently declared in headers but not fully implemented in v0.1.4:
 
-- Full iterator support (`begin/end/rbegin/...`) and iterator-based modifiers.
-- Several STL-like helpers/modifiers such as `max_size`, `capacity`, `reserve`, `shrink_to_fit`, `front`, `back`, `value`, `find`, `count`, `resize`, `erase`, `update`, and some `insert` overloads.
+- Several STL-like helpers/modifiers such as `max_size`, `capacity`, `reserve`, `shrink_to_fit`, `front`, `back`, `value`, `clear`, `pop_back`, `resize`, `insert(InputIt, InputIt)`, `insert(initializer_list)`, and `try_emplace`.
+- Iterator-based APIs for modifiers are partially implemented (core insert/erase/update paths are available, while some declared overloads are still pending).
 - Stateful allocator instance storage in `basic_json`.
 - Planned extension points noted in code comments (such as ADL serializer customization and binary type support).
 

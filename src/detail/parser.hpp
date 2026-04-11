@@ -79,7 +79,7 @@ namespace jsonpp
         class JSONStringParser : public ParserBase<StreamT>
         {
         protected:
-            JSONPP_IMPORT_PARSERBASE_MEMBERS_
+            JSONPP_IMPORT_PARSERBASE_MEMBERS
 
             using string = typename JsonT::string;
 
@@ -118,7 +118,7 @@ namespace jsonpp
             char num_buf[4];
             for (int i = 0; i < 4; ++i)
                 num_buf[i] = advance();
-            JSONPP_CHECK_EOF_("string", m_start);
+            JSONPP_CHECK_EOF("string", m_start);
 
             auto [ptr, ec] = std::from_chars(num_buf, num_buf + 4, value, 16);
             if (ec == std::errc() && ptr == num_buf + 4)
@@ -240,7 +240,7 @@ namespace jsonpp
 
                     if (!chunk.empty())
                         m_result.append(chunk);
-                    JSONPP_CHECK_EOF_("string", m_start);
+                    JSONPP_CHECK_EOF("string", m_start);
                 }
                 // 下面检查为什么停下
 
@@ -263,7 +263,7 @@ namespace jsonpp
                     advance();
                 }
             }
-            JSONPP_CHECK_EOF_("string", m_start);
+            JSONPP_CHECK_EOF("string", m_start);
 
             advance(); // 跳过右引号
             return std::move(m_result);
@@ -279,7 +279,7 @@ namespace jsonpp
         class Parser : public ParserBase<StreamT>
         {
         protected:
-            JSONPP_IMPORT_PARSERBASE_MEMBERS_
+            JSONPP_IMPORT_PARSERBASE_MEMBERS
 
             using boolean = typename JsonT::boolean;
             using number_int = typename JsonT::number_int;
@@ -450,7 +450,7 @@ namespace jsonpp
         JsonT Parser<StreamT, JsonT>::parse_array()
         {
             // Increase nesting depth counter and check limit
-            if (++m_nesting_depth > MAX_NESTING_DEPTH)
+            if (++m_nesting_depth > JSONPP_MAX_NESTING_DEPTH)
                 throw JsonDepthLimitExceeded(tell_pos());
 
             array arr;
@@ -467,7 +467,7 @@ namespace jsonpp
                     break;
                 else if (peek() != ',')
                 {
-                    JSONPP_CHECK_EOF_("array", start);
+                    JSONPP_CHECK_EOF("array", start);
                     throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
                 }
                 advance(); // 跳过 ','
@@ -477,7 +477,7 @@ namespace jsonpp
                 if (peek() == ']')
                     throw JsonParseError("Expected value after comma, but found ']' instead", tell_pos());
             }
-            JSONPP_CHECK_EOF_("array", start);
+            JSONPP_CHECK_EOF("array", start);
 
             advance(); // 跳过右 ]
             --m_nesting_depth; // Decrease nesting depth counter before returning
@@ -488,7 +488,7 @@ namespace jsonpp
         JsonT Parser<StreamT, JsonT>::parse_object()
         {
             // Increase nesting depth counter and check limit
-            if (++m_nesting_depth > MAX_NESTING_DEPTH)
+            if (++m_nesting_depth > JSONPP_MAX_NESTING_DEPTH)
                 throw JsonDepthLimitExceeded(tell_pos());
 
             object obj;
@@ -506,7 +506,7 @@ namespace jsonpp
 
                 if (peek() != ':')
                 {
-                    JSONPP_CHECK_EOF_("object", start);
+                    JSONPP_CHECK_EOF("object", start);
                     throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
                 }
                 advance();
@@ -521,7 +521,7 @@ namespace jsonpp
                     break;
                 else if (peek() != ',')
                 {
-                    JSONPP_CHECK_EOF_("object", start);
+                    JSONPP_CHECK_EOF("object", start);
                     throw JsonParseError(JsonParseError::UNPARSABLE_MESSAGE, tell_pos());
                 }
                 advance(); // skip comma
@@ -531,7 +531,7 @@ namespace jsonpp
                 if (peek() == '}')
                     throw JsonParseError("Expected value after comma, but found '}' instead", tell_pos());
             }
-            JSONPP_CHECK_EOF_("object", start);
+            JSONPP_CHECK_EOF("object", start);
 
             advance(); // 跳过右 }
             --m_nesting_depth; // Decrease nesting depth counter before returning

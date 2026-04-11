@@ -1,0 +1,35 @@
+name: Generate Single Include Header
+
+# 触发条件：在每次 push 到仓库时执行
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 使用最新的 Linux 环境
+
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 安装 Python3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 运行生成脚本
+      - name: Run generation script
+        run: |
+          python3 scripts/generate_single_include.py
+
+      # 将生成的新文件提交到仓库
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto-generate single include header"
+          file_pattern: 'single_include/jsonpp.hpp'

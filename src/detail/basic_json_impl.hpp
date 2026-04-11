@@ -385,7 +385,7 @@ namespace jsonpp
     BASIC_JSON_TEMPLATE
     bool BASIC_JSON_TYPE::contains(string const& key) const
     {
-        auto& obj = as_object();
+        auto const& obj = as_object();
         return obj.find(key) != obj.end();
     }
 
@@ -431,12 +431,132 @@ namespace jsonpp
     }
 
     BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::iterator BASIC_JSON_TYPE::insert(const_iterator pos, const_reference val)
+    {
+        if (pos.owner() != this || !pos.is_array_mode())
+            throw JsonTypeError("Iterator is not a valid array iterator for this value");
+
+        auto& arr = as_array();
+        auto it = arr.insert(pos.array_base(), val);
+        return iterator::make_array(this, it);
+    }
+
+    BASIC_JSON_TEMPLATE
     template <typename... Args>
     auto BASIC_JSON_TYPE::emplace(Args&&... args)
     {
         if (empty() || is_null())
             set_type<Type::object>();
         return as_object().emplace(std::forward<Args>(args)...);
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::size_type BASIC_JSON_TYPE::erase(string const& key)
+    {
+        return as_object().erase(key);
+    }
+
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::erase(size_type index)
+    {
+        auto& arr = as_array();
+        if (index >= arr.size())
+            throw JsonOutOfRange(JsonOutOfRange::ARRAY_OUT_OF_RANGE_MESSAGE);
+
+        auto it = arr.begin();
+        std::advance(it, static_cast<difference_type>(index));
+        arr.erase(it);
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::iterator BASIC_JSON_TYPE::erase(const_iterator pos)
+    {
+        if (pos.owner() != this)
+            throw JsonTypeError("Iterator is not a valid iterator for this value");
+
+        if (pos.is_array_mode())
+        {
+            auto& arr = as_array();
+            if (pos.array_base() == arr.end())
+                throw JsonOutOfRange(JsonOutOfRange::ARRAY_OUT_OF_RANGE_MESSAGE);
+
+            auto it = arr.erase(pos.array_base());
+            return iterator::make_array(this, it);
+        }
+
+        if (pos.is_object_mode())
+        {
+            auto& obj = as_object();
+            if (pos.object_base() == obj.end())
+                throw JsonOutOfRange(JsonOutOfRange::KEY_NOT_FOUND_MESSAGE);
+
+            auto it = obj.erase(pos.object_base());
+            return iterator::make_object(this, it);
+        }
+
+        throw JsonTypeError("Iterator is not a valid array/object iterator for this value");
+    }
+
+    BASIC_JSON_TEMPLATE
+    typename BASIC_JSON_TYPE::iterator BASIC_JSON_TYPE::erase(const_iterator first, const_iterator last)
+    {
+        if (first.owner() != this || last.owner() != this)
+            throw JsonTypeError("Iterator range is not a valid range for this value");
+
+        if (first.is_array_mode() && last.is_array_mode())
+        {
+            auto& arr = as_array();
+            auto it = arr.erase(first.array_base(), last.array_base());
+            return iterator::make_array(this, it);
+        }
+
+        if (first.is_object_mode() && last.is_object_mode())
+        {
+            auto& obj = as_object();
+            auto it = obj.erase(first.object_base(), last.object_base());
+            return iterator::make_object(this, it);
+        }
+
+        throw JsonTypeError("Iterator range is not a valid array/object range for this value");
+    }
+
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::update(const_reference other, bool merge_objects)
+    {
+        static_cast<void>(other.as_object());
+        update(other.cbegin(), other.cend(), merge_objects);
+    }
+
+    BASIC_JSON_TEMPLATE
+    void BASIC_JSON_TYPE::update(const_iterator first, const_iterator last, bool merge_objects)
+    {
+        if (empty() || is_null())
+            set_type<Type::object>();
+
+        if (first.owner() == nullptr && last.owner() == nullptr)
+            return;
+        if (!first.is_object_mode() || !last.is_object_mode())
+            throw JsonTypeError("Update range requires object iterators");
+        if (first.owner() != last.owner())
+            throw JsonTypeError("Update range iterators must come from the same object");
+
+        std::vector<std::pair<string, basic_json>> staged;
+        for (auto it = first; it != last; ++it)
+            staged.emplace_back(string(it.key()), *it);
+
+        auto& dst = as_object();
+        for (auto& entry : staged)
+        {
+            auto dst_it = dst.find(entry.first);
+            if (merge_objects && dst_it != dst.end() && dst_it->second.is_object() && entry.second.is_object())
+            {
+                dst_it->second.update(entry.second, true);
+            }
+            else
+            {
+                dst[entry.first] = std::move(entry.second);
+            }
+        }
     }
 
     BASIC_JSON_TEMPLATE

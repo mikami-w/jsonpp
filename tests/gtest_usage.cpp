@@ -393,3 +393,101 @@ TEST(JsonIteratorTest, FindAndCountWorkOnObject) {
     EXPECT_EQ(obj.count("name"), 1);
     EXPECT_EQ(obj.count("missing"), 0);
 }
+
+TEST(JsonIteratorModifierTest, ArrayInsertAndEraseByIterator) {
+    json arr = json::array{1, 3};
+
+    auto pos = arr.begin();
+    ++pos;
+    auto inserted = arr.insert(pos, json(2));
+
+    ASSERT_EQ(arr.as_array().size(), 3);
+    EXPECT_EQ(arr[0].as_int(), 1);
+    EXPECT_EQ(arr[1].as_int(), 2);
+    EXPECT_EQ(arr[2].as_int(), 3);
+    EXPECT_EQ(inserted->as_int(), 2);
+
+    auto after_erase = arr.erase(inserted);
+    ASSERT_NE(after_erase, arr.end());
+    EXPECT_EQ(after_erase->as_int(), 3);
+    ASSERT_EQ(arr.as_array().size(), 2);
+    EXPECT_EQ(arr[0].as_int(), 1);
+    EXPECT_EQ(arr[1].as_int(), 3);
+}
+
+TEST(JsonIteratorModifierTest, ObjectEraseByIteratorAndKey) {
+    json obj;
+    obj["a"] = 1;
+    obj["b"] = 2;
+    obj["c"] = 3;
+
+    auto it_b = obj.find("b");
+    ASSERT_NE(it_b, obj.end());
+    auto next = obj.erase(it_b);
+
+    ASSERT_NE(next, obj.end());
+    EXPECT_EQ(next.key(), "c");
+    EXPECT_EQ(obj.count("b"), 0);
+
+    EXPECT_EQ(obj.erase("a"), 1);
+    EXPECT_EQ(obj.erase("missing"), 0);
+}
+
+TEST(JsonIteratorModifierTest, EraseRangeOnArray) {
+    json arr = json::array{1, 2, 3, 4, 5};
+
+    auto first = arr.begin();
+    ++first; // 2
+    auto last = first;
+    ++last;
+    ++last;
+    ++last; // 指向 5
+
+    auto ret = arr.erase(first, last);
+
+    ASSERT_NE(ret, arr.end());
+    EXPECT_EQ(ret->as_int(), 5);
+    ASSERT_EQ(arr.as_array().size(), 2);
+    EXPECT_EQ(arr[0].as_int(), 1);
+    EXPECT_EQ(arr[1].as_int(), 5);
+}
+
+TEST(JsonIteratorModifierTest, UpdateFromObjectAndIteratorRange) {
+    json dst;
+    dst["a"] = 1;
+    dst["nested"]["x"] = 10;
+
+    json src;
+    src["a"] = 2;
+    src["b"] = 3;
+    src["nested"]["y"] = 20;
+
+    dst.update(src, true);
+
+    EXPECT_EQ(dst["a"].as_int(), 2);
+    EXPECT_EQ(dst["b"].as_int(), 3);
+    EXPECT_EQ(dst["nested"]["x"].as_int(), 10);
+    EXPECT_EQ(dst["nested"]["y"].as_int(), 20);
+
+    json src2;
+    src2["c"] = 4;
+    src2["a"] = 5;
+    dst.update(src2.cbegin(), src2.cend(), false);
+
+    EXPECT_EQ(dst["a"].as_int(), 5);
+    EXPECT_EQ(dst["c"].as_int(), 4);
+}
+
+TEST(JsonIteratorModifierTest, ContainsThrowsOnNonObject) {
+    json scalar = 42;
+    EXPECT_THROW({
+        auto has_key = scalar.contains("x");
+        (void)has_key;
+    }, JsonTypeError);
+
+    json empty_val;
+    EXPECT_THROW({
+        auto has_key = empty_val.contains("x");
+        (void)has_key;
+    }, JsonTypeError);
+}

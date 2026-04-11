@@ -29,6 +29,14 @@ limitations under the License.
 
 namespace jsonpp::details
 {
+    enum class IteratorMode : std::uint8_t
+    {
+        empty,
+        scalar,
+        array,
+        object
+    };
+
     template <typename T, typename = void>
     struct has_pre_decrement : std::false_type {};
 
@@ -62,15 +70,6 @@ namespace jsonpp::details
         using array_iterator = _array_it<IsConst>;
         using object_iterator = _object_it<IsConst>;
 
-    private:
-        enum class Mode : std::uint8_t
-        {
-            empty,
-            scalar,
-            array,
-            object
-        };
-
     public:
         static constexpr bool supports_array_reverse = has_pre_decrement<array_iterator>::value;
         static constexpr bool supports_object_reverse = has_pre_decrement<object_iterator>::value;
@@ -92,7 +91,7 @@ namespace jsonpp::details
         {
             JsonIterator it;
             it.m_owner = owner;
-            it.m_mode = Mode::empty;
+            it.m_mode = IteratorMode::empty;
             it.m_scalar_is_end = true;
             return it;
         }
@@ -101,7 +100,7 @@ namespace jsonpp::details
         {
             JsonIterator it;
             it.m_owner = owner;
-            it.m_mode = Mode::scalar;
+            it.m_mode = IteratorMode::scalar;
             it.m_scalar_is_end = at_end;
             return it;
         }
@@ -110,7 +109,7 @@ namespace jsonpp::details
         {
             JsonIterator it;
             it.m_owner = owner;
-            it.m_mode = Mode::array;
+            it.m_mode = IteratorMode::array;
             it.m_array_iter = std::move(it_value);
             return it;
         }
@@ -119,7 +118,7 @@ namespace jsonpp::details
         {
             JsonIterator it;
             it.m_owner = owner;
-            it.m_mode = Mode::object;
+            it.m_mode = IteratorMode::object;
             it.m_object_iter = std::move(it_value);
             return it;
         }
@@ -129,22 +128,22 @@ namespace jsonpp::details
             assert(m_owner != nullptr && "Cannot dereference default-constructed iterator");
             switch (m_mode)
             {
-            case Mode::scalar:
+            case IteratorMode::scalar:
                 assert(!m_scalar_is_end && "Cannot dereference end iterator");
                 return *m_owner;
-            case Mode::array:
+            case IteratorMode::array:
             {
                 auto const& arr = m_owner->as_array();
                 assert(m_array_iter != arr.end() && "Cannot dereference end iterator");
                 return *m_array_iter;
             }
-            case Mode::object:
+            case IteratorMode::object:
             {
                 auto const& obj = m_owner->as_object();
                 assert(m_object_iter != obj.end() && "Cannot dereference end iterator");
                 return m_object_iter->second;
             }
-            case Mode::empty:
+            case IteratorMode::empty:
                 assert(false && "Cannot dereference iterator for empty JSON value");
 #if defined(__GNUC__) || defined(__clang__)
                 __builtin_unreachable();
@@ -170,17 +169,17 @@ namespace jsonpp::details
             assert(m_owner != nullptr && "Cannot increment default-constructed iterator");
             switch (m_mode)
             {
-            case Mode::scalar:
+            case IteratorMode::scalar:
                 assert(!m_scalar_is_end && "Cannot increment end iterator");
                 m_scalar_is_end = true;
                 return *this;
-            case Mode::array:
+            case IteratorMode::array:
                 ++m_array_iter;
                 return *this;
-            case Mode::object:
+            case IteratorMode::object:
                 ++m_object_iter;
                 return *this;
-            case Mode::empty:
+            case IteratorMode::empty:
                 assert(false && "Cannot increment iterator for empty JSON value");
                 return *this;
             }
@@ -204,11 +203,11 @@ namespace jsonpp::details
             assert(m_owner != nullptr && "Cannot decrement default-constructed iterator");
             switch (m_mode)
             {
-            case Mode::scalar:
+            case IteratorMode::scalar:
                 assert(m_scalar_is_end && "Cannot decrement begin iterator");
                 m_scalar_is_end = false;
                 return *this;
-            case Mode::array:
+            case IteratorMode::array:
                 if constexpr (supports_array_reverse)
                 {
                     --m_array_iter;
@@ -218,7 +217,7 @@ namespace jsonpp::details
                 {
                     throw JsonTypeError("Array iterator does not support decrement");
                 }
-            case Mode::object:
+            case IteratorMode::object:
                 if constexpr (supports_object_reverse)
                 {
                     --m_object_iter;
@@ -228,7 +227,7 @@ namespace jsonpp::details
                 {
                     throw JsonTypeError("Object iterator does not support decrement");
                 }
-            case Mode::empty:
+            case IteratorMode::empty:
                 assert(false && "Cannot decrement iterator for empty JSON value");
                 return *this;
             }
@@ -263,13 +262,13 @@ namespace jsonpp::details
 
             switch (m_mode)
             {
-            case Mode::empty:
+            case IteratorMode::empty:
                 return true;
-            case Mode::scalar:
+            case IteratorMode::scalar:
                 return m_scalar_is_end == rhs.m_scalar_is_end;
-            case Mode::array:
+            case IteratorMode::array:
                 return m_array_iter == rhs.m_array_iter;
-            case Mode::object:
+            case IteratorMode::object:
                 return m_object_iter == rhs.m_object_iter;
             }
 
@@ -288,14 +287,57 @@ namespace jsonpp::details
 
         typename JsonT::string const& key() const
         {
-            if (m_mode != Mode::object)
+            if (m_mode != IteratorMode::object)
                 throw JsonTypeError("Iterator key() is only valid for object iterators");
             return m_object_iter->first;
         }
 
+        pointer owner() const noexcept
+        {
+            return m_owner;
+        }
+
+        bool is_empty_mode() const noexcept
+        {
+            return m_mode == IteratorMode::empty;
+        }
+
+        bool is_scalar_mode() const noexcept
+        {
+            return m_mode == IteratorMode::scalar;
+        }
+
+        bool is_array_mode() const noexcept
+        {
+            return m_mode == IteratorMode::array;
+        }
+
+        bool is_object_mode() const noexcept
+        {
+            return m_mode == IteratorMode::object;
+        }
+
+        bool scalar_at_end() const
+        {
+            assert(m_mode == IteratorMode::scalar && "scalar_at_end() requires scalar-mode iterator");
+            return m_scalar_is_end;
+        }
+
+        array_iterator const& array_base() const
+        {
+            assert(m_mode == IteratorMode::array && "array_base() requires array-mode iterator");
+            return m_array_iter;
+        }
+
+        object_iterator const& object_base() const
+        {
+            assert(m_mode == IteratorMode::object && "object_base() requires object-mode iterator");
+            return m_object_iter;
+        }
+
     private:
         pointer m_owner = nullptr;
-        Mode m_mode = Mode::empty;
+        IteratorMode m_mode = IteratorMode::empty;
         bool m_scalar_is_end = true;
         array_iterator m_array_iter{};
         object_iterator m_object_iter{};

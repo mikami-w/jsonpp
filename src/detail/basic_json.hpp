@@ -349,7 +349,7 @@ namespace jsonpp
         number_float const* get_if_float() const noexcept { return std::get_if<number_float>(&m_value); }
         number_float* get_if_float() noexcept { return std::get_if<number_float>(&m_value); }
 
-        std::string const* get_if_string() const noexcept { return std::get_if<string>(&m_value); }
+        string const* get_if_string() const noexcept { return std::get_if<string>(&m_value); }
         string* get_if_string() noexcept { return std::get_if<string>(&m_value); }
 
         array const* get_if_array() const noexcept { return std::get_if<array>(&m_value); }
@@ -369,7 +369,7 @@ namespace jsonpp
         number_float& as_float() { return as_impl<number_float>(m_value, "double"); }
 
         string const& as_string() const { return as_impl<string>(m_value, "string"); }
-        std::string& as_string() { return as_impl<string>(m_value, "string"); }
+        string& as_string() { return as_impl<string>(m_value, "string"); }
 
         array const& as_array() const { return as_impl<array>(m_value, "array"); }
         array& as_array() { return as_impl<array>(m_value, "array"); }

@@ -175,7 +175,7 @@ namespace jsonpp::details
 
                                 if constexpr (Pretty)
                                     append_indent(indent, depth + 1);
-                                dump<Pretty>(item);
+                                dump<Pretty>(item, indent, depth + 1);
                             }
                             if constexpr (Pretty)
                                 append_indent(indent, depth);
@@ -201,7 +201,7 @@ namespace jsonpp::details
                                     m_sh.append(": ", 2);
                                 else
                                     m_sh.append(':');
-                                dump<Pretty>(item.second);
+                                dump<Pretty>(item.second, indent, depth + 1);
                             }
                             if constexpr (Pretty)
                                 append_indent(indent, depth);

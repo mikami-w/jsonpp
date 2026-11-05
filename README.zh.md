@@ -80,6 +80,16 @@ int main() {
 
 如果你偏好单文件集成，可使用 `single_include/jsonpp.hpp`。
 
+生成的单头文件默认在 GCC、Clang 和 MSVC 下抑制库内部警告。如需查看库警告，
+请在包含单头文件前定义 `JSONPP_ENABLE_WARNINGS`，或通过编译器选项定义该宏：
+
+```cpp
+#define JSONPP_ENABLE_WARNINGS
+#include "jsonpp.hpp"
+```
+
+`src/` 中的散文件不抑制警告。该宏不会改变编译器的警告选项，应用自身代码的警告仍然可见。
+
 ### 最小 CMake 示例
 
 ```cmake

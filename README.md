@@ -76,6 +76,18 @@ Add this repository's `src/` to your include path, then:
 
 Use `single_include/jsonpp.hpp` when a single-file drop-in is preferred.
 
+The generated single header suppresses library warnings on GCC, Clang, and MSVC
+by default. Define `JSONPP_ENABLE_WARNINGS` before including it (or in your
+compiler definitions) to keep library warnings visible:
+
+```cpp
+#define JSONPP_ENABLE_WARNINGS
+#include "jsonpp.hpp"
+```
+
+Headers under `src/` do not suppress warnings. This macro leaves your compiler's
+warning flags unchanged, and warnings in application code remain enabled.
+
 ### Minimal CMake example
 
 ```cmake

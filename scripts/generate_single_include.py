@@ -2,7 +2,8 @@
 """Generate an amalgamated single-include header for jsonpp.
 
 The script recursively expands local includes from an entry header, deduplicates
-system includes, and writes one usable header file.
+system includes, and writes one usable header file. Warning suppression is added
+only to the generated header; source headers retain their normal diagnostics.
 """
 
 from __future__ import annotations
@@ -17,6 +18,29 @@ INCLUDE_RE = re.compile(r'^\s*#\s*include\s*([<"])([^">]+)[>"]\s*(?://.*)?$')
 IFNDEF_RE = re.compile(r'^\s*#\s*ifndef\s+([A-Za-z_]\w*)\s*$')
 DEFINE_RE = re.compile(r'^\s*#\s*define\s+([A-Za-z_]\w*)(?:\s+.*)?$')
 ENDIF_RE = re.compile(r'^\s*#\s*endif\b')
+
+
+# Keep this policy in the generator so the source headers stay warning-enabled.
+WARNING_CONTROL = r'''// Define JSONPP_ENABLE_WARNINGS before including this header to see library warnings.
+#if defined(JSONPP_ENABLE_WARNINGS)
+#  define JSONPP_IGNORE_WARNING_BEGIN
+#  define JSONPP_IGNORE_WARNING_END
+#elif defined(__clang__)
+#  define JSONPP_IGNORE_WARNING_BEGIN \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Weverything\"")
+#  define JSONPP_IGNORE_WARNING_END _Pragma("clang diagnostic pop")
+#elif defined(_MSC_VER)
+#  define JSONPP_IGNORE_WARNING_BEGIN __pragma(warning(push, 0))
+#  define JSONPP_IGNORE_WARNING_END __pragma(warning(pop))
+#elif defined(__GNUC__)
+#  define JSONPP_IGNORE_WARNING_BEGIN _Pragma("GCC system_header")
+#  define JSONPP_IGNORE_WARNING_END
+#else
+#  define JSONPP_IGNORE_WARNING_BEGIN
+#  define JSONPP_IGNORE_WARNING_END
+#endif
+'''
 
 
 class Amalgamator:
@@ -240,7 +264,12 @@ def main() -> int:
         "*/\n\n"
         f"#ifndef {include_guard}\n"
         f"#define {include_guard}\n\n"
+        f"{WARNING_CONTROL}\n"
+        "JSONPP_IGNORE_WARNING_BEGIN\n\n"
         f"{merged_body}"
+        "JSONPP_IGNORE_WARNING_END\n\n"
+        "#undef JSONPP_IGNORE_WARNING_BEGIN\n"
+        "#undef JSONPP_IGNORE_WARNING_END\n\n"
         f"#endif // {include_guard}\n",
         encoding="utf-8",
     )
